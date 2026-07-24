@@ -1,0 +1,16 @@
+<svg width="660" height="250" viewBox="0 0 660 250" xmlns="http://www.w3.org/2000/svg">
+  <rect width="660" height="250" fill="#FFFFFF"/>
+
+  <!-- Icon group: refined structured N, tighter corner radius, tonal two-color diagonal cut -->
+  <g transform="translate(-56.4,-56.4) scale(0.9)">
+    <g transform="rotate(65.24 200 200)">
+      <rect x="105" y="172" width="190" height="56" rx="4" fill="#1A9CAB"/>
+    </g>
+    <rect x="96" y="96" width="56" height="208" rx="26" fill="#12414A"/>
+    <rect x="248" y="96" width="56" height="208" rx="26" fill="#12414A"/>
+    <circle cx="200" cy="200" r="17" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Wordmark: optically centered against the icon -->
+  <text x="249.15" y="178" font-family="URW Gothic" font-weight="600" font-size="150" letter-spacing="-1" fill="#12414A">nuvio</text>
+</svg>

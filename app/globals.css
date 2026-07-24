@@ -1,0 +1,306 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode (toggled on <html>) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   NUVIO — Design System (Teal / Cyan brand)
+   Marca: "Devolvemos tiempo para crecer."
+   Paleta: #1A9CAB · #39B5C0 · #58CED5 · #76E6EA · #95FFFF
+   Tono: premium, humano, moderno, cercano.
+   ============================================================ */
+
+@theme {
+  /* ---- Brand: Nuvio Teal ---- */
+  --color-brand-50: #ecffff;
+  --color-brand-100: #d3fbfd;
+  --color-brand-200: #a7f3f7;
+  --color-brand-300: #76e6ea; /* palette */
+  --color-brand-400: #58ced5; /* palette */
+  --color-brand-500: #39b5c0; /* palette */
+  --color-brand-600: #1a9cab; /* palette — core brand */
+  --color-brand-700: #15808d;
+  --color-brand-800: #12626d;
+  --color-brand-900: #0f4a53;
+  --color-brand-950: #0a3238;
+
+  /* ---- Aurora: bright cyan highlight ---- */
+  --color-aurora-300: #95ffff; /* palette */
+  --color-aurora-400: #76e6ea; /* palette */
+  --color-aurora-500: #58ced5; /* palette */
+  --color-aurora-600: #39b5c0;
+
+  /* ---- Sky (nube / cielo) ---- */
+  --color-sky-soft: #8fecf1;
+
+  /* ---- Warm accent (funcional: alertas / rating), muy limitado ---- */
+  --color-sunrise-300: #ffd9a8;
+  --color-sunrise-400: #ffb26b;
+  --color-sunrise-500: #ff9e4d;
+
+  /* ---- Semantic surfaces & ink (flip in dark mode) ---- */
+  --color-paper: #f5fbfb;
+  --color-surface: #ffffff;
+  --color-cloud: #ecf7f8;
+  --color-ink: #0b2e33;
+  --color-ink-soft: #34595e;
+  --color-muted: #5f7c80;
+  --color-line: #dcecee;
+
+  /* ---- Typography ---- */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, sans-serif;
+
+  /* ---- Radii ---- */
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+  --radius-4xl: 2.25rem;
+
+  /* ---- Easings ---- */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- Keyframes ---- */
+  --animate-float: float 7s var(--ease-out-soft) infinite;
+  --animate-float-slow: float 11s var(--ease-out-soft) infinite;
+  --animate-aurora: aurora 16s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.6s linear infinite;
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-pulse-ring: pulse-ring 3s var(--ease-out-soft) infinite;
+}
+
+/* ---- Logo colors (theme-aware) ---- */
+:root {
+  --logo-bar: #0e3b42;   /* dark teal verticals */
+  --logo-diag: #1a9cab;  /* teal diagonal */
+  --logo-dot: #ffffff;   /* center dot */
+  --glass-tint: 255 255 255;
+  --mesh-strength: 0.42;
+}
+
+.dark {
+  /* Subtle brand tints become dark so light chips read well on dark */
+  --color-brand-50: #0e363c;
+  --color-brand-100: #123f46;
+
+  /* Surfaces & ink flip */
+  --color-paper: #05191c;
+  --color-surface: #0c2a2f;
+  --color-cloud: #10353b;
+  --color-ink: #eaf7f8;
+  --color-ink-soft: #b3d3d6;
+  --color-muted: #85a6aa;
+  --color-line: #1c4148;
+
+  /* Logo adapts to dark background */
+  --logo-bar: #d7f6f8;
+  --logo-diag: #58ced5;
+  --logo-dot: #05191c;
+  --glass-tint: 12 42 47;
+  --mesh-strength: 0.30;
+
+  color-scheme: dark;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-16px) translateX(6px); }
+}
+
+@keyframes aurora {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.9; }
+  33% { transform: translate(6%, -8%) scale(1.15); opacity: 1; }
+  66% { transform: translate(-8%, 6%) scale(0.95); opacity: 0.75; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  70% { transform: scale(1.6); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+* {
+  border-color: var(--color-line);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  overflow-x: clip;
+  max-width: 100%;
+  transition: background-color 0.5s var(--ease-out-soft), color 0.5s var(--ease-out-soft);
+}
+
+::selection {
+  background-color: color-mix(in oklab, var(--color-brand-500) 30%, transparent);
+  color: var(--color-brand-950);
+}
+
+.dark ::selection {
+  color: var(--color-brand-50);
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--color-brand-600) 0%,
+    var(--color-brand-500) 45%,
+    var(--color-aurora-400) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dark .text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--color-brand-400) 0%,
+    var(--color-brand-300) 45%,
+    var(--color-aurora-300) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.text-gradient-warm {
+  background: linear-gradient(100deg, var(--color-brand-700), var(--color-aurora-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.dark .text-gradient-warm {
+  background: linear-gradient(100deg, var(--color-brand-300), var(--color-aurora-300));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.bg-mesh {
+  background:
+    radial-gradient(60% 55% at 15% 8%, color-mix(in oklab, var(--color-brand-400) calc(var(--mesh-strength) * 100%), transparent), transparent 60%),
+    radial-gradient(50% 45% at 92% 12%, color-mix(in oklab, var(--color-aurora-400) calc(var(--mesh-strength) * 90%), transparent), transparent 55%),
+    radial-gradient(65% 55% at 70% 100%, color-mix(in oklab, var(--color-sky-soft) calc(var(--mesh-strength) * 105%), transparent), transparent 60%);
+}
+
+.glass {
+  background: color-mix(in srgb, rgb(var(--glass-tint)) 62%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid color-mix(in srgb, rgb(var(--glass-tint)) 55%, transparent);
+}
+
+.dark .glass {
+  background: color-mix(in srgb, rgb(var(--glass-tint)) 55%, transparent);
+  border: 1px solid color-mix(in srgb, white 10%, transparent);
+}
+
+.glass-dark {
+  background: color-mix(in oklab, #0b2e33 55%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+}
+
+.card-hover {
+  transition: transform 0.5s var(--ease-out-soft), box-shadow 0.5s var(--ease-out-soft), border-color 0.5s var(--ease-out-soft);
+}
+
+.shadow-soft {
+  box-shadow: 0 1px 2px rgba(10, 46, 51, 0.05), 0 12px 40px -12px rgba(26, 156, 171, 0.22);
+}
+
+.dark .shadow-soft {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 44px -14px rgba(0, 0, 0, 0.6);
+}
+
+.shadow-glow {
+  box-shadow: 0 20px 70px -20px rgba(26, 156, 171, 0.55);
+}
+
+.dark .shadow-glow {
+  box-shadow: 0 20px 70px -18px rgba(88, 206, 213, 0.4);
+}
+
+.ring-shimmer {
+  background: linear-gradient(110deg, transparent 30%, color-mix(in oklab, white 55%, transparent) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Animated conic border */
+.border-conic {
+  position: relative;
+}
+.border-conic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from 0deg, var(--color-brand-400), var(--color-aurora-400), var(--color-sky-soft), var(--color-brand-400));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out-soft);
+}
+.border-conic:hover::before {
+  opacity: 1;
+}
+
+.dotted-grid {
+  background-image: radial-gradient(color-mix(in oklab, var(--color-brand-400) 55%, transparent) 1px, transparent 1px);
+  background-size: 26px 26px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 75%);
+}
+
+/* Logo helpers */
+.logo-bar { fill: var(--logo-bar); transition: fill 0.5s var(--ease-out-soft); }
+.logo-diag { fill: var(--logo-diag); transition: fill 0.5s var(--ease-out-soft); }
+.logo-dot { fill: var(--logo-dot); transition: fill 0.5s var(--ease-out-soft); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

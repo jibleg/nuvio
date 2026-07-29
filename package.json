@@ -1,5 +1,5 @@
 {
-  "name": "nuvio-landing",
+  "name": "nuvio",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,17 +9,26 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.5.7",
+    "@tanstack/react-query": "^5.101.4",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
     "framer-motion": "11.18.0",
     "lucide-react": "0.474.0",
     "next": "^16.2.11",
+    "postgres": "^3.4.9",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "react-hook-form": "^7.83.0",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "22.10.7",
     "@types/react": "19.0.7",
     "@types/react-dom": "19.0.3",
+    "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4.3.3",
     "typescript": "5.7.3"
   }

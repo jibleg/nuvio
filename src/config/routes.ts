@@ -1,0 +1,24 @@
+/**
+ * Centralized route paths. Reference these constants instead of hardcoding
+ * URL strings across the app so that a path change happens in one place.
+ */
+export const ROUTES = {
+  home: "/",
+  login: "/login",
+  /** Portal de módulos (launcher tras iniciar sesión). */
+  dashboard: "/dashboard",
+  noAutorizado: "/no-autorizado",
+
+  // Módulo Administración
+  administracion: "/administracion",
+  usuarios: "/administracion/usuarios",
+  perfiles: "/administracion/perfiles",
+  permisos: "/administracion/permisos",
+
+  // Otros módulos (portal)
+  facturacion: "/facturacion",
+  pos: "/pos",
+  inventario: "/inventario",
+} as const;
+
+export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

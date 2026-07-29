@@ -16,12 +16,13 @@ export async function updateUsuarioUseCase(
   id: number,
   data: UpdateUsuarioData,
   currentUserId: number,
+  idCliente: number,
 ): Promise<UsuarioMutationResult> {
   if (id === currentUserId && !data.activo) {
     return { ok: false, error: "No puedes desactivar tu propia cuenta." };
   }
 
-  await updateUsuario(id, {
+  await updateUsuario(id, idCliente, {
     nombre: data.nombre,
     email: data.email,
     passwordHash: data.password ? bcrypt.hashSync(data.password, 10) : null,

@@ -1,26 +1,39 @@
 import { hashSessionToken } from "@/lib/auth/tokens";
-import { getUserPermissionCodes } from "@/features/rbac";
+import { getUserPermissionCodes, findPerfilNamesByUsuario } from "@/features/rbac";
 import { findEmpresasByUsuario } from "@/features/empresas";
 import { findModuloKeysByUsuario } from "@/features/modulos";
+import { getCurrentTenant } from "@/features/tenant";
 import { findSesionVigenteConUsuario } from "../repositories/sesiones-repository";
 import type { SessionContext } from "../types";
 
 /**
  * Arma el contexto de sesión a partir del token de la cookie: valida la sesión,
- * carga los permisos del usuario y sus empresas, y resuelve la empresa activa.
- * Devuelve null si el token no corresponde a una sesión vigente.
+ * exige que pertenezca al cliente (tenant) del subdominio actual, y carga
+ * permisos, empresas y módulos del usuario. Devuelve null si el token no
+ * corresponde a una sesión vigente del tenant en curso (bloquea reuso de cookie
+ * entre subdominios de distintos clientes).
  */
 export async function getSessionContext(
   token: string,
 ): Promise<SessionContext | null> {
+  const tenant = await getCurrentTenant();
+  if (!tenant) return null;
+
   const found = await findSesionVigenteConUsuario(hashSessionToken(token));
   if (!found) return null;
 
   const { sesion, usuario } = found;
-  const [permisos, empresas, modulos] = await Promise.all([
+
+  // La sesión y el usuario deben pertenecer al tenant del subdominio.
+  if (sesion.idCliente !== tenant.id || usuario.idCliente !== tenant.id) {
+    return null;
+  }
+
+  const [permisos, empresas, modulos, perfiles] = await Promise.all([
     getUserPermissionCodes(usuario.id),
     findEmpresasByUsuario(usuario.id),
     findModuloKeysByUsuario(usuario.id),
+    findPerfilNamesByUsuario(usuario.id),
   ]);
 
   const empresaActiva =
@@ -29,12 +42,14 @@ export async function getSessionContext(
     null;
 
   return {
+    cliente: tenant,
     usuario: {
       id: usuario.id,
       login: usuario.login,
       nombre: usuario.nombre,
       email: usuario.email,
       avatar: usuario.avatar,
+      perfil: perfiles.join(" · ") || null,
     },
     permisos,
     modulos,

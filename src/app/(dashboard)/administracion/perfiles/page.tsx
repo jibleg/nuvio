@@ -13,7 +13,7 @@ export default async function PerfilesPage() {
   const session = await requirePermission("perfiles.acceso");
   const puedeGestionar = session.permisos.includes("users.manage");
   const [perfiles, options] = await Promise.all([
-    getPerfilesList(),
+    getPerfilesList(session.cliente.id),
     getPerfilFormOptions(),
   ]);
 

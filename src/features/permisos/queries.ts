@@ -1,26 +1,5 @@
-import { listModulos } from "./repositories/modulos-repository";
-import {
-  getPermisoById,
-  listPermisos,
-} from "./repositories/permisos-admin-repository";
-import type {
-  ModuloOption,
-  PermisoDetalle,
-  PermisoListItem,
-  PermisosPorModulo,
-} from "./types";
-
-export function getPermisosList(): Promise<PermisoListItem[]> {
-  return listPermisos();
-}
-
-export function getPermisoDetalle(id: number): Promise<PermisoDetalle | null> {
-  return getPermisoById(id);
-}
-
-export function getModuloOptions(): Promise<ModuloOption[]> {
-  return listModulos();
-}
+import { listPermisos } from "./repositories/permisos-repository";
+import type { PermisoListItem, PermisosPorModulo } from "./types";
 
 /** Agrupa una lista de permisos por módulo, con "Sin módulo" al final. */
 function agrupar(permisos: PermisoListItem[]): PermisosPorModulo[] {
@@ -45,12 +24,7 @@ function agrupar(permisos: PermisoListItem[]): PermisosPorModulo[] {
   });
 }
 
-/** Todos los permisos agrupados por módulo (tabla de gestión). */
-export async function getPermisosAgrupados(): Promise<PermisosPorModulo[]> {
-  return agrupar(await listPermisos());
-}
-
-/** Solo permisos activos, agrupados — para asignar a un perfil. */
+/** Permisos activos agrupados por módulo — para asignarlos a un perfil. */
 export async function getPermisoOptionsAgrupados(): Promise<PermisosPorModulo[]> {
   const activos = (await listPermisos()).filter((permiso) => permiso.activo);
   return agrupar(activos);

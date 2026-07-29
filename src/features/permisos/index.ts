@@ -1,16 +1,8 @@
 /**
- * Gestión de permisos (CRUD) agrupados por módulo. También expone las opciones
- * de permisos agrupadas que consume el feature `perfiles` para asignarlos.
+ * Catálogo de permisos (solo lectura). Los permisos son datos sembrados por el
+ * sistema y ligados a los guards por su código; no se crean/editan desde la UI.
+ * Este feature expone las opciones agrupadas que consume `perfiles` para
+ * asignar permisos a un perfil.
  */
-export type {
-  PermisoOption,
-  PermisosPorModulo,
-  ModuloOption,
-} from "./types";
-export {
-  getPermisosList,
-  getPermisoDetalle,
-  getModuloOptions,
-  getPermisoOptionsAgrupados,
-} from "./queries";
-export { PermisosAdmin } from "./components/PermisosAdmin";
+export type { PermisoOption, PermisosPorModulo } from "./types";
+export { getPermisoOptionsAgrupados } from "./queries";

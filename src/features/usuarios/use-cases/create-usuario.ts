@@ -17,12 +17,14 @@ export type CreateUsuarioData = {
 
 export async function createUsuarioUseCase(
   data: CreateUsuarioData,
+  idCliente: number,
 ): Promise<UsuarioMutationResult> {
-  if (await existsLogin(data.login)) {
+  if (await existsLogin(data.login, idCliente)) {
     return { ok: false, error: "Ya existe un usuario con ese login." };
   }
 
   const id = await createUsuario({
+    idCliente,
     login: data.login,
     passwordHash: bcrypt.hashSync(data.password, 10),
     nombre: data.nombre,

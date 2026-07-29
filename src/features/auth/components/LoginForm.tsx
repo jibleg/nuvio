@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
-import { User, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { easeOutSoft } from "@/lib/motion";
 import { loginSchema, type LoginInput } from "../schemas";
 import { loginAction } from "../actions";
@@ -22,7 +22,7 @@ export function LoginForm() {
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { login: "", password: "" },
+    defaultValues: { email: "", password: "" },
   });
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -43,23 +43,23 @@ export function LoginForm() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: easeOutSoft, delay: 0.05 }}
       >
-        <label htmlFor="login" className={labelClass}>
-          Usuario
+        <label htmlFor="email" className={labelClass}>
+          Correo
         </label>
         <div className="relative">
           <input
-            id="login"
-            type="text"
-            autoComplete="username"
+            id="email"
+            type="email"
+            autoComplete="email"
             autoFocus
-            placeholder="tu.usuario"
+            placeholder="tu@correo.com"
             className={`peer ${inputClass}`}
-            {...register("login")}
+            {...register("email")}
           />
-          <User className={iconClass} />
+          <Mail className={iconClass} />
         </div>
-        {errors.login && (
-          <p className="mt-1.5 text-sm text-red-500">{errors.login.message}</p>
+        {errors.email && (
+          <p className="mt-1.5 text-sm text-red-500">{errors.email.message}</p>
         )}
       </motion.div>
 

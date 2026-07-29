@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth/session-cookie";
 import { hashSessionToken } from "@/lib/auth/tokens";
 import { usuarioTieneAccesoAEmpresa } from "@/features/empresas";
+import { getCurrentTenant } from "@/features/tenant";
 import { loginSchema, type LoginInput } from "./schemas";
 import { authenticateUser } from "./use-cases/authenticate-user";
 import { startSession } from "./use-cases/start-session";
@@ -28,7 +29,19 @@ export async function loginAction(
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return { error: "Datos inválidos." };
 
-  const result = await authenticateUser(parsed.data.login, parsed.data.password);
+  const tenant = await getCurrentTenant();
+  if (!tenant) {
+    return {
+      error:
+        "No se pudo identificar tu organización. Ingresa desde el subdominio de tu cuenta.",
+    };
+  }
+
+  const result = await authenticateUser(
+    parsed.data.email,
+    parsed.data.password,
+    tenant.id,
+  );
   if (!result.ok) {
     if (result.reason === "inactive") return { error: "Usuario inactivo." };
     if (result.reason === "must_reset") {
@@ -37,11 +50,11 @@ export async function loginAction(
           "Tu contraseña necesita restablecerse. Contacta al administrador.",
       };
     }
-    return { error: "Usuario o contraseña incorrectos." };
+    return { error: "Correo o contraseña incorrectos." };
   }
 
   const requestHeaders = await headers();
-  const token = await startSession(result.usuarioId, {
+  const token = await startSession(result.usuarioId, tenant.id, {
     ip: requestHeaders.get("x-forwarded-for"),
     userAgent: requestHeaders.get("user-agent"),
   });

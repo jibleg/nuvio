@@ -8,12 +8,12 @@ export const ROUTES = {
   /** Portal de módulos (launcher tras iniciar sesión). */
   dashboard: "/dashboard",
   noAutorizado: "/no-autorizado",
+  perfil: "/perfil",
 
   // Módulo Administración
   administracion: "/administracion",
   usuarios: "/administracion/usuarios",
   perfiles: "/administracion/perfiles",
-  permisos: "/administracion/permisos",
 
   // Otros módulos (portal)
   facturacion: "/facturacion",

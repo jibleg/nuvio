@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Users, UserCog, KeyRound } from "lucide-react";
+import { ArrowRight, Users, UserCog } from "lucide-react";
 import { requireModulo } from "@/features/auth";
 import { hasPermission } from "@/features/rbac";
 import { ROUTES } from "@/config/routes";
@@ -23,13 +23,6 @@ const secciones = [
     titulo: "Perfiles",
     descripcion: "Roles y los permisos que otorgan.",
   },
-  {
-    permiso: "perfiles.acceso",
-    href: ROUTES.permisos,
-    icon: KeyRound,
-    titulo: "Permisos",
-    descripcion: "Acciones concedibles, por módulo.",
-  },
 ];
 
 export default async function AdministracionHome() {
@@ -44,7 +37,7 @@ export default async function AdministracionHome() {
         Administración
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Gestiona el acceso al sistema: usuarios, roles y permisos.
+        Gestiona el acceso al sistema: usuarios y sus roles.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">

@@ -12,8 +12,9 @@ export default async function InventarioLayout({
   return (
     <ModuleShell
       titulo="Inventario"
+      icon="package"
       items={[
-        { label: "Inicio", href: ROUTES.inventario, icon: "home", exact: true },
+        { label: "Inicio", href: ROUTES.inventario, icon: "home", accent: "brand", exact: true },
       ]}
     >
       {children}

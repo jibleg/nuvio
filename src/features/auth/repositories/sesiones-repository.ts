@@ -13,6 +13,7 @@ export type SesionConUsuario = {
 export async function createSesion(data: {
   tokenHash: string;
   idUsuario: number;
+  idCliente: number;
   fechaExpira: Date;
   ip: string | null;
   userAgent: string | null;

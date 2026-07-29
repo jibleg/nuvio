@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** Validación del formulario de acceso. Fuente de verdad del tipo LoginInput. */
 export const loginSchema = z.object({
-  login: z.string().trim().min(1, "Ingresa tu usuario"),
+  email: z.email("Ingresa un correo válido"),
   password: z.string().min(1, "Ingresa tu contraseña"),
 });
 

@@ -5,12 +5,15 @@ import {
 } from "./repositories/perfiles-admin-repository";
 import type { PerfilDetalle, PerfilFormOptions, PerfilListItem } from "./types";
 
-export function getPerfilesList(): Promise<PerfilListItem[]> {
-  return listPerfilesAdmin();
+export function getPerfilesList(idCliente: number): Promise<PerfilListItem[]> {
+  return listPerfilesAdmin(idCliente);
 }
 
-export function getPerfilById(id: number): Promise<PerfilDetalle | null> {
-  return getPerfilDetalle(id);
+export function getPerfilById(
+  id: number,
+  idCliente: number,
+): Promise<PerfilDetalle | null> {
+  return getPerfilDetalle(id, idCliente);
 }
 
 /** Permisos disponibles (agrupados por módulo) para asignar al perfil. */

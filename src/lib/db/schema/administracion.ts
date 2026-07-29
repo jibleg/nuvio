@@ -17,8 +17,9 @@ export const administracion = pgSchema("administracion");
 
 export const usuarios = administracion.table("usuarios", {
   id: integer("cve_usuario").primaryKey(),
+  idCliente: integer("cve_cliente").notNull(),
   login: varchar("login").notNull(),
-  passwordHash: varchar("contrasena").notNull(),
+  passwordHash: varchar("password").notNull(),
   nombre: varchar("nombre").notNull(),
   descripcion: varchar("descripcion").notNull(),
   email: varchar("email"),
@@ -29,6 +30,7 @@ export const usuarios = administracion.table("usuarios", {
 
 export const perfiles = administracion.table("perfiles", {
   id: integer("cve_perfil").primaryKey(),
+  idCliente: integer("cve_cliente").notNull(),
   nombre: varchar("nombre").notNull(),
   descripcion: varchar("descripcion"),
   activo: smallint("activo").notNull().default(1),
@@ -68,6 +70,7 @@ export const sesiones = administracion.table("sesiones", {
     .default(sql`nextval('administracion.sq_admin_sesiones')`),
   tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
   idUsuario: integer("cve_usuario").notNull(),
+  idCliente: integer("cve_cliente"),
   idEmpresaActiva: integer("cve_empresa_activa"),
   fechaCreacion: timestamp("fecha_creacion", { withTimezone: true })
     .notNull()

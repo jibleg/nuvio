@@ -23,19 +23,19 @@ export type UsuarioActionResult = { error: string };
 export async function getUsuarioDetalleAction(
   id: number,
 ): Promise<UsuarioDetalle | null> {
-  await requirePermission("usuarios.acceso");
-  return getUsuarioById(id);
+  const session = await requirePermission("usuarios.acceso");
+  return getUsuarioById(id, session.cliente.id);
 }
 
 export async function createUsuarioAction(
   input: CreateUsuarioInput,
 ): Promise<UsuarioActionResult | void> {
-  await requirePermission(MANAGE);
+  const session = await requirePermission(MANAGE);
 
   const parsed = createUsuarioSchema.safeParse(input);
   if (!parsed.success) return { error: "Revisa los datos del formulario." };
 
-  const result = await createUsuarioUseCase(parsed.data);
+  const result = await createUsuarioUseCase(parsed.data, session.cliente.id);
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.usuarios);
@@ -50,7 +50,12 @@ export async function updateUsuarioAction(
   const parsed = updateUsuarioSchema.safeParse(input);
   if (!parsed.success) return { error: "Revisa los datos del formulario." };
 
-  const result = await updateUsuarioUseCase(id, parsed.data, session.usuario.id);
+  const result = await updateUsuarioUseCase(
+    id,
+    parsed.data,
+    session.usuario.id,
+    session.cliente.id,
+  );
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.usuarios);
@@ -62,7 +67,12 @@ export async function toggleUsuarioActivoAction(
 ): Promise<UsuarioActionResult | void> {
   const session = await requirePermission(MANAGE);
 
-  const result = await toggleUsuarioActivoUseCase(id, activo, session.usuario.id);
+  const result = await toggleUsuarioActivoUseCase(
+    id,
+    activo,
+    session.usuario.id,
+    session.cliente.id,
+  );
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.usuarios);

@@ -7,7 +7,9 @@ const SENTINEL_ID = -1;
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export async function listPerfilesAdmin(): Promise<PerfilListItem[]> {
+export async function listPerfilesAdmin(
+  idCliente: number,
+): Promise<PerfilListItem[]> {
   const [rows, permisoCounts, usuarioCounts] = await Promise.all([
     db
       .select({
@@ -17,7 +19,7 @@ export async function listPerfilesAdmin(): Promise<PerfilListItem[]> {
         activo: perfiles.activo,
       })
       .from(perfiles)
-      .where(ne(perfiles.id, SENTINEL_ID))
+      .where(and(ne(perfiles.id, SENTINEL_ID), eq(perfiles.idCliente, idCliente)))
       .orderBy(perfiles.nombre),
     db
       .select({
@@ -50,6 +52,7 @@ export async function listPerfilesAdmin(): Promise<PerfilListItem[]> {
 
 export async function getPerfilDetalle(
   id: number,
+  idCliente: number,
 ): Promise<PerfilDetalle | null> {
   const [perfil] = await db
     .select({
@@ -59,7 +62,7 @@ export async function getPerfilDetalle(
       activo: perfiles.activo,
     })
     .from(perfiles)
-    .where(eq(perfiles.id, id))
+    .where(and(eq(perfiles.id, id), eq(perfiles.idCliente, idCliente)))
     .limit(1);
 
   if (!perfil) return null;
@@ -82,6 +85,7 @@ export async function getPerfilDetalle(
 
 export async function existsNombre(
   nombre: string,
+  idCliente: number,
   exceptId?: number,
 ): Promise<boolean> {
   const [row] = await db
@@ -89,14 +93,19 @@ export async function existsNombre(
     .from(perfiles)
     .where(
       exceptId === undefined
-        ? eq(perfiles.nombre, nombre)
-        : and(eq(perfiles.nombre, nombre), ne(perfiles.id, exceptId)),
+        ? and(eq(perfiles.nombre, nombre), eq(perfiles.idCliente, idCliente))
+        : and(
+            eq(perfiles.nombre, nombre),
+            eq(perfiles.idCliente, idCliente),
+            ne(perfiles.id, exceptId),
+          ),
     )
     .limit(1);
   return Boolean(row);
 }
 
 export async function createPerfil(data: {
+  idCliente: number;
   nombre: string;
   descripcion: string | null;
   permisoIds: number[];
@@ -109,6 +118,7 @@ export async function createPerfil(data: {
 
     await tx.insert(perfiles).values({
       id,
+      idCliente: data.idCliente,
       nombre: data.nombre,
       descripcion: data.descripcion,
       activo: 1,
@@ -120,6 +130,7 @@ export async function createPerfil(data: {
 
 export async function updatePerfil(
   id: number,
+  idCliente: number,
   data: {
     nombre: string;
     descripcion: string | null;
@@ -135,18 +146,22 @@ export async function updatePerfil(
         descripcion: data.descripcion,
         activo: data.activo ? 1 : 0,
       })
-      .where(eq(perfiles.id, id));
+      .where(and(eq(perfiles.id, id), eq(perfiles.idCliente, idCliente)));
 
     await tx.delete(perfilPermisos).where(eq(perfilPermisos.idPerfil, id));
     await assignPermisos(tx, id, data.permisoIds);
   });
 }
 
-export async function setActivo(id: number, activo: boolean): Promise<void> {
+export async function setActivo(
+  id: number,
+  idCliente: number,
+  activo: boolean,
+): Promise<void> {
   await db
     .update(perfiles)
     .set({ activo: activo ? 1 : 0 })
-    .where(eq(perfiles.id, id));
+    .where(and(eq(perfiles.id, id), eq(perfiles.idCliente, idCliente)));
 }
 
 function mapaConteo(

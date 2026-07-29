@@ -25,18 +25,18 @@ export type PerfilActionResult = { error: string };
 export async function getPerfilDetalleAction(
   id: number,
 ): Promise<PerfilDetalle | null> {
-  await requirePermission("perfiles.acceso");
-  return getPerfilById(id);
+  const session = await requirePermission("perfiles.acceso");
+  return getPerfilById(id, session.cliente.id);
 }
 
 export async function createPerfilAction(
   input: CreatePerfilInput,
 ): Promise<PerfilActionResult | void> {
-  await requirePermission(MANAGE);
+  const session = await requirePermission(MANAGE);
   const parsed = createPerfilSchema.safeParse(input);
   if (!parsed.success) return { error: "Revisa los datos del formulario." };
 
-  const result = await createPerfilUseCase(parsed.data);
+  const result = await createPerfilUseCase(parsed.data, session.cliente.id);
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.perfiles);
@@ -46,11 +46,11 @@ export async function updatePerfilAction(
   id: number,
   input: UpdatePerfilInput,
 ): Promise<PerfilActionResult | void> {
-  await requirePermission(MANAGE);
+  const session = await requirePermission(MANAGE);
   const parsed = updatePerfilSchema.safeParse(input);
   if (!parsed.success) return { error: "Revisa los datos del formulario." };
 
-  const result = await updatePerfilUseCase(id, parsed.data);
+  const result = await updatePerfilUseCase(id, parsed.data, session.cliente.id);
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.perfiles);
@@ -60,8 +60,8 @@ export async function togglePerfilActivoAction(
   id: number,
   activo: boolean,
 ): Promise<PerfilActionResult | void> {
-  await requirePermission(MANAGE);
-  const result = await togglePerfilActivoUseCase(id, activo);
+  const session = await requirePermission(MANAGE);
+  const result = await togglePerfilActivoUseCase(id, activo, session.cliente.id);
   if (!result.ok) return { error: result.error };
   revalidatePath(ROUTES.perfiles);
 }

@@ -8,7 +8,10 @@ export default async function PosLayout({ children }: { children: ReactNode }) {
   return (
     <ModuleShell
       titulo="Punto de venta"
-      items={[{ label: "Inicio", href: ROUTES.pos, icon: "home", exact: true }]}
+      icon="shopping-cart"
+      items={[
+        { label: "Inicio", href: ROUTES.pos, icon: "home", accent: "brand", exact: true },
+      ]}
     >
       {children}
     </ModuleShell>

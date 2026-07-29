@@ -13,8 +13,8 @@ export default async function UsuariosPage() {
   const session = await requirePermission("usuarios.acceso");
   const puedeGestionar = session.permisos.includes("users.manage");
   const [usuarios, options] = await Promise.all([
-    getUsuariosList(),
-    getUsuarioFormOptions(),
+    getUsuariosList(session.cliente.id),
+    getUsuarioFormOptions(session.cliente.id),
   ]);
 
   return (

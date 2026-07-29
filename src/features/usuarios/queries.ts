@@ -7,19 +7,24 @@ import {
 } from "./repositories/usuarios-admin-repository";
 import type { UsuarioDetalle, UsuarioFormOptions, UsuarioListItem } from "./types";
 
-export function getUsuariosList(): Promise<UsuarioListItem[]> {
-  return listUsuarios();
+export function getUsuariosList(idCliente: number): Promise<UsuarioListItem[]> {
+  return listUsuarios(idCliente);
 }
 
-export function getUsuarioById(id: number): Promise<UsuarioDetalle | null> {
-  return getUsuarioDetalle(id);
+export function getUsuarioById(
+  id: number,
+  idCliente: number,
+): Promise<UsuarioDetalle | null> {
+  return getUsuarioDetalle(id, idCliente);
 }
 
-/** Roles y empresas disponibles para asignar en el formulario. */
-export async function getUsuarioFormOptions(): Promise<UsuarioFormOptions> {
+/** Roles y empresas del cliente disponibles para asignar en el formulario. */
+export async function getUsuarioFormOptions(
+  idCliente: number,
+): Promise<UsuarioFormOptions> {
   const [perfiles, empresas] = await Promise.all([
-    findAllPerfiles(),
-    findAllEmpresas(),
+    findAllPerfiles(idCliente),
+    findAllEmpresas(idCliente),
   ]);
   return { perfiles, empresas, modulos: APP_MODULOS };
 }

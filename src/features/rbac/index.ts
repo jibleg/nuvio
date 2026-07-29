@@ -5,5 +5,8 @@
  */
 export { getUserPermissionCodes } from "./use-cases/get-user-permission-codes";
 export { hasPermission, hasAnyPermission } from "./authorization";
-export { findAllPerfiles } from "./repositories/perfiles-repository";
+export {
+  findAllPerfiles,
+  findPerfilNamesByUsuario,
+} from "./repositories/perfiles-repository";
 export type { Perfil } from "./repositories/perfiles-repository";

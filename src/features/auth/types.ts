@@ -1,4 +1,5 @@
 import type { Empresa } from "@/features/empresas";
+import type { Cliente } from "@/features/tenant";
 
 /** Usuario autenticado, sin datos sensibles (nunca incluye el hash). */
 export type SessionUser = {
@@ -7,6 +8,8 @@ export type SessionUser = {
   nombre: string;
   email: string | null;
   avatar: string | null;
+  /** Perfil(es) del usuario, unidos para mostrar (p. ej. "Administrador"). */
+  perfil: string | null;
 };
 
 /**
@@ -14,6 +17,8 @@ export type SessionUser = {
  * qué puede hacer y en qué empresa está trabajando.
  */
 export type SessionContext = {
+  /** Cliente (tenant) al que pertenece la sesión, resuelto por subdominio. */
+  cliente: Cliente;
   usuario: SessionUser;
   permisos: string[];
   /** Claves de módulos de aplicación a los que el operador tiene acceso. */

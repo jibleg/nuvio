@@ -15,18 +15,33 @@ export default async function AdministracionLayout({
   const session = await requireModulo("administracion");
 
   const items: SidebarItem[] = [
-    { label: "Inicio", href: ROUTES.administracion, icon: "home", exact: true },
+    {
+      label: "Inicio",
+      href: ROUTES.administracion,
+      icon: "home",
+      accent: "brand",
+      exact: true,
+    },
   ];
   if (hasPermission(session.permisos, "usuarios.acceso")) {
-    items.push({ label: "Usuarios", href: ROUTES.usuarios, icon: "users" });
+    items.push({
+      label: "Usuarios",
+      href: ROUTES.usuarios,
+      icon: "users",
+      accent: "aurora",
+    });
   }
   if (hasPermission(session.permisos, "perfiles.acceso")) {
-    items.push({ label: "Perfiles", href: ROUTES.perfiles, icon: "user-cog" });
-    items.push({ label: "Permisos", href: ROUTES.permisos, icon: "key" });
+    items.push({
+      label: "Perfiles",
+      href: ROUTES.perfiles,
+      icon: "user-cog",
+      accent: "sky",
+    });
   }
 
   return (
-    <ModuleShell titulo="Administración" items={items}>
+    <ModuleShell titulo="Administración" icon="shield" items={items}>
       {children}
     </ModuleShell>
   );

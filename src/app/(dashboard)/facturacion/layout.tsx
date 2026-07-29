@@ -12,8 +12,9 @@ export default async function FacturacionLayout({
   return (
     <ModuleShell
       titulo="Facturación"
+      icon="file-text"
       items={[
-        { label: "Inicio", href: ROUTES.facturacion, icon: "home", exact: true },
+        { label: "Inicio", href: ROUTES.facturacion, icon: "home", accent: "brand", exact: true },
       ]}
     >
       {children}

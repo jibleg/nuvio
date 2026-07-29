@@ -14,11 +14,13 @@ type PerfilData = {
 
 export async function createPerfilUseCase(
   data: PerfilData,
+  idCliente: number,
 ): Promise<PerfilMutationResult> {
-  if (await existsNombre(data.nombre)) {
+  if (await existsNombre(data.nombre, idCliente)) {
     return { ok: false, error: "Ya existe un perfil con ese nombre." };
   }
   const id = await createPerfil({
+    idCliente,
     nombre: data.nombre,
     descripcion: data.descripcion,
     permisoIds: data.permisos,
@@ -29,11 +31,12 @@ export async function createPerfilUseCase(
 export async function updatePerfilUseCase(
   id: number,
   data: PerfilData & { activo: boolean },
+  idCliente: number,
 ): Promise<PerfilMutationResult> {
-  if (await existsNombre(data.nombre, id)) {
+  if (await existsNombre(data.nombre, idCliente, id)) {
     return { ok: false, error: "Ya existe otro perfil con ese nombre." };
   }
-  await updatePerfil(id, {
+  await updatePerfil(id, idCliente, {
     nombre: data.nombre,
     descripcion: data.descripcion,
     activo: data.activo,
@@ -45,7 +48,8 @@ export async function updatePerfilUseCase(
 export async function togglePerfilActivoUseCase(
   id: number,
   activo: boolean,
+  idCliente: number,
 ): Promise<PerfilMutationResult> {
-  await setActivo(id, activo);
+  await setActivo(id, idCliente, activo);
   return { ok: true, id };
 }

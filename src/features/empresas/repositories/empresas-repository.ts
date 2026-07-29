@@ -22,12 +22,12 @@ export async function findEmpresasByUsuario(
     .where(eq(usuarioEmpresas.idUsuario, usuarioId));
 }
 
-/** Todas las empresas activas (para asignación en administración). */
-export async function findAllEmpresas(): Promise<Empresa[]> {
+/** Empresas activas de un cliente (para asignación en administración). */
+export async function findAllEmpresas(idCliente: number): Promise<Empresa[]> {
   return db
     .select(empresaColumns)
     .from(empresas)
-    .where(eq(empresas.activo, 1))
+    .where(and(eq(empresas.activo, 1), eq(empresas.idCliente, idCliente)))
     .orderBy(empresas.nombreComercial);
 }
 

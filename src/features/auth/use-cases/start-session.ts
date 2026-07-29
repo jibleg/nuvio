@@ -8,6 +8,7 @@ import { createSesion } from "../repositories/sesiones-repository";
  */
 export async function startSession(
   usuarioId: number,
+  idCliente: number,
   meta: { ip: string | null; userAgent: string | null },
 ): Promise<string> {
   const token = generateSessionToken();
@@ -16,6 +17,7 @@ export async function startSession(
   await createSesion({
     tokenHash: hashSessionToken(token),
     idUsuario: usuarioId,
+    idCliente,
     fechaExpira,
     ip: meta.ip,
     userAgent: meta.userAgent,

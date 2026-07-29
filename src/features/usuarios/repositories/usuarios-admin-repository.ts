@@ -15,6 +15,7 @@ const SENTINEL_ID = -1;
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type CreateUsuarioData = {
+  idCliente: number;
   login: string;
   passwordHash: string;
   nombre: string;
@@ -34,7 +35,9 @@ export type UpdateUsuarioData = {
   moduloKeys: string[];
 };
 
-export async function listUsuarios(): Promise<UsuarioListItem[]> {
+export async function listUsuarios(
+  idCliente: number,
+): Promise<UsuarioListItem[]> {
   const [rows, perfilRows, empresaCounts] = await Promise.all([
     db
       .select({
@@ -45,7 +48,7 @@ export async function listUsuarios(): Promise<UsuarioListItem[]> {
         activo: usuarios.activo,
       })
       .from(usuarios)
-      .where(ne(usuarios.id, SENTINEL_ID))
+      .where(and(ne(usuarios.id, SENTINEL_ID), eq(usuarios.idCliente, idCliente)))
       .orderBy(usuarios.nombre),
     db
       .select({ idUsuario: perfilUsuarios.idUsuario, nombre: perfiles.nombre })
@@ -86,6 +89,7 @@ export async function listUsuarios(): Promise<UsuarioListItem[]> {
 
 export async function getUsuarioDetalle(
   id: number,
+  idCliente: number,
 ): Promise<UsuarioDetalle | null> {
   const [usuario] = await db
     .select({
@@ -96,7 +100,7 @@ export async function getUsuarioDetalle(
       activo: usuarios.activo,
     })
     .from(usuarios)
-    .where(eq(usuarios.id, id))
+    .where(and(eq(usuarios.id, id), eq(usuarios.idCliente, idCliente)))
     .limit(1);
 
   if (!usuario) return null;
@@ -132,6 +136,7 @@ export async function getUsuarioDetalle(
 
 export async function existsLogin(
   login: string,
+  idCliente: number,
   exceptId?: number,
 ): Promise<boolean> {
   const [row] = await db
@@ -139,8 +144,12 @@ export async function existsLogin(
     .from(usuarios)
     .where(
       exceptId === undefined
-        ? eq(usuarios.login, login)
-        : and(eq(usuarios.login, login), ne(usuarios.id, exceptId)),
+        ? and(eq(usuarios.login, login), eq(usuarios.idCliente, idCliente))
+        : and(
+            eq(usuarios.login, login),
+            eq(usuarios.idCliente, idCliente),
+            ne(usuarios.id, exceptId),
+          ),
     )
     .limit(1);
   return Boolean(row);
@@ -155,6 +164,7 @@ export async function createUsuario(data: CreateUsuarioData): Promise<number> {
 
     await tx.insert(usuarios).values({
       id,
+      idCliente: data.idCliente,
       login: data.login,
       passwordHash: data.passwordHash,
       nombre: data.nombre,
@@ -172,6 +182,7 @@ export async function createUsuario(data: CreateUsuarioData): Promise<number> {
 
 export async function updateUsuario(
   id: number,
+  idCliente: number,
   data: UpdateUsuarioData,
 ): Promise<void> {
   await db.transaction(async (tx) => {
@@ -183,7 +194,7 @@ export async function updateUsuario(
         activo: data.activo ? 1 : 0,
         ...(data.passwordHash ? { passwordHash: data.passwordHash } : {}),
       })
-      .where(eq(usuarios.id, id));
+      .where(and(eq(usuarios.id, id), eq(usuarios.idCliente, idCliente)));
 
     await tx.delete(perfilUsuarios).where(eq(perfilUsuarios.idUsuario, id));
     await assignPerfiles(tx, id, data.perfilIds);
@@ -195,11 +206,15 @@ export async function updateUsuario(
   });
 }
 
-export async function setActivo(id: number, activo: boolean): Promise<void> {
+export async function setActivo(
+  id: number,
+  idCliente: number,
+  activo: boolean,
+): Promise<void> {
   await db
     .update(usuarios)
     .set({ activo: activo ? 1 : 0 })
-    .where(eq(usuarios.id, id));
+    .where(and(eq(usuarios.id, id), eq(usuarios.idCliente, idCliente)));
 }
 
 async function assignPerfiles(

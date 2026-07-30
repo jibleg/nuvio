@@ -7,6 +7,7 @@ import {
   Shield,
   ShoppingCart,
   SlidersHorizontal,
+  Store,
   UserCog,
   Users,
   type LucideIcon,
@@ -23,6 +24,7 @@ const ICONS: Record<string, LucideIcon> = {
   key: KeyRound,
   sliders: SlidersHorizontal,
   grid: LayoutGrid,
+  store: Store,
 };
 
 /** Resuelve una clave de icono a su icono de lucide (módulo plano, server/client). */

@@ -1,3 +1,5 @@
+import type { PlanKey } from "@/config/plans";
+
 /** Staff de Nuvio autenticado en el panel interno (nunca un usuario de un cliente). */
 export type SuperAdminUser = {
   id: number;
@@ -16,6 +18,7 @@ export type ClienteListItem = {
   nombre: string;
   activo: boolean;
   fechaAlta: Date;
+  plan: PlanKey;
   empresasCount: number;
   usuariosCount: number;
   moduloKeys: string[];
@@ -26,6 +29,8 @@ export type ClienteDetalle = {
   slug: string;
   nombre: string;
   activo: boolean;
+  plan: PlanKey;
+  empresasCount: number;
   /** Módulos licenciados (paquete/plan). "administracion" siempre incluido. */
   moduloKeys: string[];
   /** Usuario administrador sembrado en el onboarding (login "admin"), si existe. */
@@ -36,6 +41,7 @@ export type ClienteDetalle = {
 export type OnboardClienteData = {
   clienteNombre: string;
   slug: string;
+  plan: PlanKey;
   empresaNombreComercial: string;
   empresaNombreCorto: string | null;
   empresaRazonSocial: string | null;
@@ -50,6 +56,7 @@ export type OnboardClienteData = {
 export type UpdateClienteData = {
   nombre: string;
   activo: boolean;
+  plan: PlanKey;
   modulos: string[];
 };
 

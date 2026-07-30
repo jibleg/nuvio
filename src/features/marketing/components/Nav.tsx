@@ -10,8 +10,9 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 const links = [
   { label: "Producto", href: "#modulos" },
   { label: "Cómo funciona", href: "#conectado" },
-  { label: "Próximamente", href: "#roadmap" },
+  { label: "Planes", href: "#planes" },
   { label: "Filosofía", href: "#filosofia" },
+  { label: "Próximamente", href: "#roadmap" },
 ];
 
 export function Nav() {
@@ -37,7 +38,7 @@ export function Nav() {
           scrolled ? "glass shadow-soft" : "bg-transparent"
         }`}
       >
-        <Logo />
+        <Logo size="lg" />
 
         <div className="hidden items-center gap-1 lg:flex">
           {links.map((l) => (

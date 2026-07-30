@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { resolveModulos } from "@/config/modules";
+import { getPlan } from "@/config/plans";
 import { ModuleIcon } from "@/features/modulos/components/module-icons";
 import { ClienteActivoToggle } from "./ClienteActivoToggle";
 import { ClienteForm } from "./ClienteForm";
@@ -119,6 +120,7 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
               <thead>
                 <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-muted">
                   <th className="px-5 py-3">Cliente</th>
+                  <th className="px-5 py-3">Plan</th>
                   <th className="px-5 py-3">Módulos</th>
                   <th className="px-5 py-3">Empresas</th>
                   <th className="px-5 py-3">Usuarios</th>
@@ -145,9 +147,14 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
+                      <PlanBadge plan={cliente.plan} />
+                    </td>
+                    <td className="px-5 py-3.5">
                       <ModulosChips moduloKeys={cliente.moduloKeys} />
                     </td>
-                    <td className="px-5 py-3.5 text-ink-soft">{cliente.empresasCount}</td>
+                    <td className="px-5 py-3.5 text-ink-soft">
+                      <EmpresasCount cliente={cliente} />
+                    </td>
                     <td className="px-5 py-3.5 text-ink-soft">{cliente.usuariosCount}</td>
                     <td className="px-5 py-3.5 text-ink-soft">
                       {formatFecha(new Date(cliente.fechaAlta))}
@@ -182,6 +189,9 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                   </div>
                   <ClienteActivoToggle id={cliente.id} activo={cliente.activo} />
                 </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <PlanBadge plan={cliente.plan} />
+                </div>
                 <div className="mt-3">
                   <ModulosChips moduloKeys={cliente.moduloKeys} />
                 </div>
@@ -189,7 +199,7 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                   <div className="flex items-center gap-3 text-xs text-muted">
                     <span className="inline-flex items-center gap-1">
                       <Building2 className="h-3.5 w-3.5" />
-                      {cliente.empresasCount}
+                      <EmpresasCount cliente={cliente} />
                     </span>
                     <span className="inline-flex items-center gap-1">
                       <Users className="h-3.5 w-3.5" />
@@ -227,6 +237,7 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
             : editando?.nombre
         }
         size="xl"
+        closeOnOverlayClick={false}
       >
         <ClienteForm
           key={modo === "edit" ? `edit-${editando?.id}` : "create"}
@@ -312,6 +323,27 @@ function Paginacion({
         </div>
       </div>
     </div>
+  );
+}
+
+function PlanBadge({ plan: planKey }: { plan: ClienteListItem["plan"] }) {
+  const plan = getPlan(planKey);
+  return (
+    <span className="inline-flex items-center rounded-full bg-cloud px-2.5 py-0.5 text-xs font-semibold text-ink-soft">
+      {plan?.nombre ?? planKey}
+    </span>
+  );
+}
+
+/** Empresas usadas vs. el límite del plan contratado (sin límite = solo el conteo). */
+function EmpresasCount({ cliente }: { cliente: ClienteListItem }) {
+  const plan = getPlan(cliente.plan);
+  const max = plan?.maxEmpresas ?? null;
+  return (
+    <>
+      {cliente.empresasCount}
+      {max !== null && <span className="text-muted">/{max}</span>}
+    </>
   );
 }
 

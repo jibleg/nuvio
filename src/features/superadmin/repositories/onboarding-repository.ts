@@ -26,7 +26,7 @@ export async function onboardCliente(
   return db.transaction(async (tx) => {
     const [{ id: clienteId }] = await tx
       .insert(clientes)
-      .values({ slug: data.slug, nombre: data.clienteNombre, activo: 1 })
+      .values({ slug: data.slug, nombre: data.clienteNombre, activo: 1, plan: data.plan })
       .returning({ id: clientes.id });
 
     const [{ maxId: maxEmpresaId }] = await tx

@@ -16,17 +16,27 @@ export const clientes = corporativo.table("clientes", {
   slug: varchar("slug", { length: 63 }).notNull(),
   nombre: varchar("nombre", { length: 150 }).notNull(),
   activo: smallint("activo").notNull().default(1),
+  /** Plan comercial contratado: limita empresas y módulos de negocio (ver src/config/plans.ts). */
+  plan: varchar("plan", { length: 20 }).notNull().default("empresarial"),
   fechaAlta: timestamp("fecha_alta", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const empresas = corporativo.table("empresas", {
   id: integer("cve_empresa").primaryKey(),
   idCliente: integer("cve_cliente").notNull(),
+  /** NULL = esta fila es la matriz; con valor = es sucursal de esa matriz. */
+  idEmpresaMatriz: integer("cve_empresa_matriz"),
   nombreComercial: varchar("nombre_comercial").notNull(),
   descripcion: varchar("descripcion").notNull(),
   nombreCorto: varchar("nombre_corto"),
   razonSocial: varchar("razon_social"),
   rfc: varchar("rfc"),
+  calle: varchar("calle"),
+  colonia: varchar("colonia"),
+  ciudad: varchar("ciudad"),
+  codigoPostal: integer("codigo_postal"),
+  telefono: varchar("telefono"),
+  email: varchar("email"),
   activo: integer("activo"),
   idRegimen: integer("cve_regimen"),
 });

@@ -14,6 +14,7 @@ export const ROUTES = {
   administracion: "/administracion",
   usuarios: "/administracion/usuarios",
   perfiles: "/administracion/perfiles",
+  sucursales: "/administracion/sucursales",
 
   // Otros módulos (portal)
   facturacion: "/facturacion",

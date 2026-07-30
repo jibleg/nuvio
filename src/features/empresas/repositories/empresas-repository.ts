@@ -9,6 +9,7 @@ const empresaColumns = {
   nombreCorto: empresas.nombreCorto,
   rfc: empresas.rfc,
   activo: empresas.activo,
+  idEmpresaMatriz: empresas.idEmpresaMatriz,
 };
 
 /** Empresas a las que un usuario tiene acceso (según `usuario_empresas`). */

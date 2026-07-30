@@ -22,6 +22,7 @@ import {
   UserCog,
 } from "lucide-react";
 import { APP_MODULOS } from "@/config/modules";
+import { getPlan, PLANES, type Plan, type PlanKey } from "@/config/plans";
 import { ModuleIcon } from "@/features/modulos/components/module-icons";
 import {
   checkSlugDisponibleAction,
@@ -54,13 +55,24 @@ const slugField = z
     "Solo minúsculas, números y guiones",
   );
 
+const rfcField = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .max(13, "Máximo 13 caracteres")
+  .regex(/^[A-Z0-9]*$/, "Solo letras y números");
+
+const PLAN_KEYS = PLANES.map((plan) => plan.key) as [PlanKey, ...PlanKey[]];
+const planField = z.enum(PLAN_KEYS, "Selecciona un plan");
+
 const createSchema = z.object({
   clienteNombre: z.string().trim().min(1, "Requerido"),
   slug: slugField,
+  plan: planField,
   empresaNombreComercial: z.string().trim().min(1, "Requerido"),
   empresaNombreCorto: z.string().trim(),
   empresaRazonSocial: z.string().trim(),
-  empresaRfc: z.string().trim(),
+  empresaRfc: rfcField,
   adminNombre: z.string().trim().min(1, "Requerido"),
   adminEmail: emailField,
   adminPassword: z
@@ -84,8 +96,8 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 const STEP_FIELDS: Record<TabId, readonly (keyof CreateValues)[]> = {
-  cliente: ["clienteNombre", "slug"],
-  empresa: ["empresaNombreComercial"],
+  cliente: ["clienteNombre", "slug", "plan"],
+  empresa: ["empresaNombreComercial", "empresaRfc"],
   admin: ["adminNombre", "adminEmail", "adminPassword"],
   modulos: [],
 };
@@ -93,6 +105,14 @@ const STEP_FIELDS: Record<TabId, readonly (keyof CreateValues)[]> = {
 const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all placeholder:text-muted focus:border-brand-400 focus:ring-4 focus:ring-brand-400/20";
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
+
+/** Fuerza mayúsculas en el valor real del input (no solo visualmente), preservando el cursor. */
+function uppercaseInput(e: React.ChangeEvent<HTMLInputElement>) {
+  const input = e.target;
+  const cursor = input.selectionStart;
+  input.value = input.value.toUpperCase();
+  if (cursor !== null) input.setSelectionRange(cursor, cursor);
+}
 
 export function ClienteForm({
   mode,
@@ -124,6 +144,7 @@ function CreateClienteForm({
     watch,
     trigger,
     setError,
+    setValue,
     clearErrors,
     formState: { errors },
   } = useForm<CreateValues>({
@@ -131,6 +152,7 @@ function CreateClienteForm({
     defaultValues: {
       clienteNombre: "",
       slug: "",
+      plan: "emprendedor",
       empresaNombreComercial: "",
       empresaNombreCorto: "",
       empresaRazonSocial: "",
@@ -150,6 +172,8 @@ function CreateClienteForm({
   const [isPending, startTransition] = useTransition();
 
   const slug = watch("slug");
+  const planKey = watch("plan");
+  const plan = getPlan(planKey) ?? PLANES[0];
   const stepIndex = TABS.findIndex((tab) => tab.id === activeTab);
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === TABS.length - 1;
@@ -179,19 +203,31 @@ function CreateClienteForm({
   }, [slug]);
 
   const toggleModulo = (key: string) => {
-    setModuloKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setModuloKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (plan.maxModulosNegocio !== null && prev.length >= plan.maxModulosNegocio) return prev;
+      return [...prev, key];
+    });
+  };
+
+  const selectPlan = (key: PlanKey) => {
+    setValue("plan", key);
+    const nuevoPlan = getPlan(key);
+    if (nuevoPlan && nuevoPlan.maxModulosNegocio !== null) {
+      setModuloKeys((prev) => prev.slice(0, nuevoPlan.maxModulosNegocio!));
+    }
   };
 
   const tabHasError: Record<TabId, boolean> = {
-    cliente: Boolean(errors.clienteNombre || errors.slug),
-    empresa: Boolean(errors.empresaNombreComercial),
+    cliente: Boolean(errors.clienteNombre || errors.slug || errors.plan),
+    empresa: Boolean(errors.empresaNombreComercial || errors.empresaRfc),
     admin: Boolean(errors.adminNombre || errors.adminEmail || errors.adminPassword),
     modulos: false,
   };
 
   const onInvalid = (formErrors: FieldErrors<CreateValues>) => {
-    if (formErrors.clienteNombre || formErrors.slug) setActiveTab("cliente");
-    else if (formErrors.empresaNombreComercial) setActiveTab("empresa");
+    if (formErrors.clienteNombre || formErrors.slug || formErrors.plan) setActiveTab("cliente");
+    else if (formErrors.empresaNombreComercial || formErrors.empresaRfc) setActiveTab("empresa");
     else if (formErrors.adminNombre || formErrors.adminEmail || formErrors.adminPassword)
       setActiveTab("admin");
   };
@@ -225,6 +261,7 @@ function CreateClienteForm({
       const result = await onboardClienteAction({
         clienteNombre: values.clienteNombre,
         slug: values.slug,
+        plan: values.plan,
         empresaNombreComercial: values.empresaNombreComercial,
         empresaNombreCorto: values.empresaNombreCorto,
         empresaRazonSocial: values.empresaRazonSocial,
@@ -326,6 +363,9 @@ function CreateClienteForm({
                 </p>
               )}
             </Field>
+            <div className="sm:col-span-2">
+              <PlanSelector selected={planKey} onSelect={selectPlan} error={errors.plan?.message} />
+            </div>
           </div>
         )}
 
@@ -351,8 +391,15 @@ function CreateClienteForm({
                 {...register("empresaRazonSocial")}
               />
             </Field>
-            <Field label="RFC">
-              <input className={inputClass} placeholder="ACM010101AAA" {...register("empresaRfc")} />
+            <Field label="RFC" error={errors.empresaRfc?.message}>
+              <input
+                className={`${inputClass} uppercase`}
+                placeholder="ACM010101AAA"
+                maxLength={13}
+                autoCapitalize="off"
+                autoCorrect="off"
+                {...register("empresaRfc", { onChange: uppercaseInput })}
+              />
             </Field>
           </div>
         )}
@@ -400,7 +447,7 @@ function CreateClienteForm({
         )}
 
         {activeTab === "modulos" && (
-          <ModulosField selected={moduloKeys} onToggle={toggleModulo} />
+          <ModulosField selected={moduloKeys} onToggle={toggleModulo} plan={plan} />
         )}
       </div>
 
@@ -434,7 +481,9 @@ function CreateClienteForm({
 
         {isLastStep ? (
           <button
-            type="submit"
+            key="submit"
+            type="button"
+            onClick={handleSubmit(onValid, onInvalid)}
             disabled={isPending}
             className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 disabled:opacity-70 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
           >
@@ -443,6 +492,7 @@ function CreateClienteForm({
           </button>
         ) : (
           <button
+            key="next"
             type="button"
             onClick={goNext}
             className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
@@ -474,14 +524,38 @@ function EditClienteForm({
     defaultValues: { nombre: initial.nombre },
   });
   const [activo, setActivo] = useState(initial.activo);
+  const [planKey, setPlanKey] = useState<PlanKey>(initial.plan);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [moduloKeys, setModuloKeys] = useState<string[]>(
     initial.moduloKeys.filter((k) => k !== "administracion"),
   );
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const plan = getPlan(planKey) ?? PLANES[0];
+
   const toggleModulo = (key: string) => {
-    setModuloKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+    setModuloKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (plan.maxModulosNegocio !== null && prev.length >= plan.maxModulosNegocio) return prev;
+      return [...prev, key];
+    });
+  };
+
+  const selectPlan = (key: PlanKey) => {
+    const nuevoPlan = getPlan(key);
+    if (!nuevoPlan) return;
+    if (nuevoPlan.maxEmpresas !== null && initial.empresasCount > nuevoPlan.maxEmpresas) {
+      setPlanError(
+        `Este cliente ya tiene ${initial.empresasCount} empresa(s); el plan ${nuevoPlan.nombre} permite hasta ${nuevoPlan.maxEmpresas}.`,
+      );
+      return;
+    }
+    setPlanError(null);
+    setPlanKey(key);
+    if (nuevoPlan.maxModulosNegocio !== null) {
+      setModuloKeys((prev) => prev.slice(0, nuevoPlan.maxModulosNegocio!));
+    }
   };
 
   const onValid = (values: EditValues) => {
@@ -490,6 +564,7 @@ function EditClienteForm({
       const result = await updateClienteAction(initial.id, {
         nombre: values.nombre,
         activo,
+        plan: planKey,
         modulos: moduloKeys,
       });
       if (result?.error) {
@@ -530,12 +605,20 @@ function EditClienteForm({
               {activo ? "Cliente activo" : "Cliente inactivo"}
             </button>
           </div>
+
+          <div className="sm:col-span-2">
+            <PlanSelector selected={planKey} onSelect={selectPlan} error={planError ?? undefined} />
+            <p className="mt-2 text-xs text-muted">
+              Empresas: {initial.empresasCount}
+              {plan.maxEmpresas !== null ? `/${plan.maxEmpresas}` : " (sin límite)"}
+            </p>
+          </div>
         </div>
       </div>
 
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
         <span className={labelClass}>Módulos licenciados</span>
-        <ModulosField selected={moduloKeys} onToggle={toggleModulo} />
+        <ModulosField selected={moduloKeys} onToggle={toggleModulo} plan={plan} />
       </div>
 
       <ResetAdminPasswordSection clienteId={initial.id} adminUsuario={initial.adminUsuario} />
@@ -669,49 +752,109 @@ function ResetAdminPasswordSection({
 /**
  * Módulos licenciados por el cliente. "Administración" es base del paquete
  * (siempre incluido, no seleccionable); los módulos de negocio dependen de lo
- * que el cliente haya contratado.
+ * que el cliente haya contratado, topados por el plan.
  */
 function ModulosField({
   selected,
   onToggle,
+  plan,
 }: {
   selected: string[];
   onToggle: (key: string) => void;
+  plan: Plan;
+}) {
+  const cap = plan.maxModulosNegocio;
+  const capReached = cap !== null && selected.length >= cap;
+
+  return (
+    <div>
+      <p className="text-xs text-muted">
+        Plan <span className="font-semibold text-ink-soft">{plan.nombre}</span>:{" "}
+        {cap === null
+          ? "todos los módulos de negocio incluidos (incluye los que se lancen a futuro)."
+          : `${selected.length}/${cap} módulo(s) de negocio incluidos.`}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <span
+          title="Incluido siempre en el paquete base"
+          className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-sm font-medium text-brand-700 dark:border-brand-500/25 dark:bg-brand-500/10 dark:text-brand-300"
+        >
+          <ModuleIcon name={ADMINISTRACION_MODULO.icon} className="h-3.5 w-3.5" />
+          {ADMINISTRACION_MODULO.nombre}
+          <Lock className="h-3 w-3 opacity-70" />
+        </span>
+        {NEGOCIO_MODULOS.map((modulo) => {
+          const active = selected.includes(modulo.key);
+          const disabled = !active && capReached;
+          return (
+            <button
+              key={modulo.key}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled}
+              title={disabled ? `El plan ${plan.nombre} no incluye más módulos de negocio.` : undefined}
+              onClick={() => onToggle(modulo.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                active
+                  ? "border-brand-400 bg-brand-50 text-brand-700 dark:text-brand-200"
+                  : disabled
+                    ? "cursor-not-allowed border-line text-muted opacity-50"
+                    : "border-line text-ink-soft hover:border-brand-300"
+              }`}
+            >
+              {active ? (
+                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+              ) : (
+                <ModuleIcon name={modulo.icon} className="h-3.5 w-3.5" />
+              )}
+              {modulo.nombre}
+              {!modulo.disponible && <span className="text-xs text-muted">· próximamente</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Selector de plan comercial: cards con nombre y límites, usado en el alta y la edición. */
+function PlanSelector({
+  selected,
+  onSelect,
+  error,
+}: {
+  selected: PlanKey;
+  onSelect: (key: PlanKey) => void;
+  error?: string;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      <span
-        title="Incluido siempre en el paquete base"
-        className="inline-flex cursor-default items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-sm font-medium text-brand-700 dark:border-brand-500/25 dark:bg-brand-500/10 dark:text-brand-300"
-      >
-        <ModuleIcon name={ADMINISTRACION_MODULO.icon} className="h-3.5 w-3.5" />
-        {ADMINISTRACION_MODULO.nombre}
-        <Lock className="h-3 w-3 opacity-70" />
-      </span>
-      {NEGOCIO_MODULOS.map((modulo) => {
-        const active = selected.includes(modulo.key);
-        return (
-          <button
-            key={modulo.key}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onToggle(modulo.key)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
-              active
-                ? "border-brand-400 bg-brand-50 text-brand-700 dark:text-brand-200"
-                : "border-line text-ink-soft hover:border-brand-300"
-            }`}
-          >
-            {active ? (
-              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-            ) : (
-              <ModuleIcon name={modulo.icon} className="h-3.5 w-3.5" />
-            )}
-            {modulo.nombre}
-            {!modulo.disponible && <span className="text-xs text-muted">· próximamente</span>}
-          </button>
-        );
-      })}
+    <div>
+      <span className={labelClass}>Plan</span>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {PLANES.map((plan) => {
+          const active = plan.key === selected;
+          return (
+            <button
+              key={plan.key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onSelect(plan.key)}
+              className={`rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                active
+                  ? "border-brand-400 bg-brand-50 dark:bg-brand-500/10"
+                  : "border-line hover:border-brand-300"
+              }`}
+            >
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                {active && <Check className="h-3.5 w-3.5 text-brand-600 dark:text-brand-300" strokeWidth={3} />}
+                {plan.nombre}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">{plan.descripcion}</span>
+            </button>
+          );
+        })}
+      </div>
+      {error && <p className="mt-1.5 text-sm text-red-500">{error}</p>}
     </div>
   );
 }

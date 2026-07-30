@@ -52,7 +52,7 @@ type FormValues = {
 const TABS = [
   { id: "cuenta", label: "Datos de la cuenta", icon: User },
   { id: "perfiles", label: "Perfiles", icon: ShieldCheck },
-  { id: "empresas", label: "Empresas", icon: Building2 },
+  { id: "empresas", label: "Sucursales", icon: Building2 },
   { id: "modulos", label: "Módulos", icon: LayoutGrid },
 ] as const;
 
@@ -287,7 +287,7 @@ export function UsuarioForm({
           <ChipGroup
             items={options.empresas.map((e) => ({
               id: e.id,
-              label: e.nombreCorto ?? e.nombreComercial,
+              label: (e.nombreCorto ?? e.nombreComercial) + (e.idEmpresaMatriz === null ? " (Matriz)" : ""),
             }))}
             selected={empresaIds}
             onToggle={(id) => toggle(id, empresaIds, setEmpresaIds)}

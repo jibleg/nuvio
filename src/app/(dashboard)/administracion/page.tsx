@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Users, UserCog } from "lucide-react";
+import { ArrowRight, Store, Users, UserCog } from "lucide-react";
 import { requireModulo } from "@/features/auth";
 import { hasPermission } from "@/features/rbac";
 import { ROUTES } from "@/config/routes";
@@ -22,6 +22,13 @@ const secciones = [
     icon: UserCog,
     titulo: "Perfiles",
     descripcion: "Roles y los permisos que otorgan.",
+  },
+  {
+    permiso: "empresas.acceso",
+    href: ROUTES.sucursales,
+    icon: Store,
+    titulo: "Sucursales",
+    descripcion: "Matriz y sucursales de tu ecosistema.",
   },
 ];
 

@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { replaceModulosForCliente } from "@/features/modulos";
+import type { PlanKey } from "@/config/plans";
 import {
   clienteModulos,
   clientes,
@@ -23,6 +24,7 @@ export async function listClientes(): Promise<ClienteListItem[]> {
         slug: clientes.slug,
         nombre: clientes.nombre,
         activo: clientes.activo,
+        plan: clientes.plan,
         fechaAlta: clientes.fechaAlta,
       })
       .from(clientes)
@@ -64,6 +66,7 @@ export async function listClientes(): Promise<ClienteListItem[]> {
     slug: row.slug,
     nombre: row.nombre,
     activo: row.activo !== 0,
+    plan: row.plan as PlanKey,
     fechaAlta: row.fechaAlta,
     empresasCount: empresasPorCliente.get(row.id) ?? 0,
     usuariosCount: usuariosPorCliente.get(row.id) ?? 0,
@@ -80,6 +83,7 @@ export async function getClienteDetalle(
       slug: clientes.slug,
       nombre: clientes.nombre,
       activo: clientes.activo,
+      plan: clientes.plan,
     })
     .from(clientes)
     .where(eq(clientes.id, id))
@@ -87,12 +91,16 @@ export async function getClienteDetalle(
 
   if (!row) return null;
 
-  const [moduloRows, adminUsuario] = await Promise.all([
+  const [moduloRows, adminUsuario, empresaCountRows] = await Promise.all([
     db
       .select({ key: clienteModulos.moduloKey })
       .from(clienteModulos)
       .where(eq(clienteModulos.idCliente, id)),
     findAdminUsuario(id),
+    db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(empresas)
+      .where(eq(empresas.idCliente, id)),
   ]);
 
   return {
@@ -100,6 +108,8 @@ export async function getClienteDetalle(
     slug: row.slug,
     nombre: row.nombre,
     activo: row.activo !== 0,
+    plan: row.plan as PlanKey,
+    empresasCount: empresaCountRows[0]?.total ?? 0,
     moduloKeys: moduloRows.map((r) => r.key),
     adminUsuario,
   };
@@ -146,12 +156,12 @@ export async function existsSlug(
 
 export async function updateCliente(
   id: number,
-  data: { nombre: string; activo: boolean; modulos: string[] },
+  data: { nombre: string; activo: boolean; plan: PlanKey; modulos: string[] },
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
       .update(clientes)
-      .set({ nombre: data.nombre, activo: data.activo ? 1 : 0 })
+      .set({ nombre: data.nombre, activo: data.activo ? 1 : 0, plan: data.plan })
       .where(eq(clientes.id, id));
 
     const moduloKeys = Array.from(new Set(["administracion", ...data.modulos]));

@@ -9,6 +9,7 @@ import {
   Roadmap,
   ForPeople,
   Testimonial,
+  Plans,
   Manifesto,
   FinalCTA,
   Footer,
@@ -31,6 +32,7 @@ export default function Home() {
         <Roadmap />
         <ForPeople />
         <Testimonial />
+        <Plans />
         <Manifesto />
         <FinalCTA />
       </main>

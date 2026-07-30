@@ -11,6 +11,7 @@ export { Modules } from "./components/Modules";
 export { Connected } from "./components/Connected";
 export { Productivity } from "./components/Productivity";
 export { Roadmap } from "./components/Roadmap";
+export { Plans } from "./components/Plans";
 export { ForPeople } from "./components/ForPeople";
 export { Testimonial } from "./components/Testimonial";
 export { Manifesto } from "./components/Manifesto";

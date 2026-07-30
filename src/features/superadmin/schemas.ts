@@ -1,5 +1,25 @@
 import { z } from "zod";
 import { RESERVED_SUBDOMAINS } from "@/lib/tenant/constants";
+import { getPlan, PLANES, type PlanKey } from "@/config/plans";
+
+const PLAN_KEYS = PLANES.map((plan) => plan.key) as [PlanKey, ...PlanKey[]];
+const planField = z.enum(PLAN_KEYS, "Selecciona un plan");
+
+/** Los módulos de negocio elegidos no pueden exceder el límite del plan contratado. */
+function refineModulosPorPlan<T extends { plan: string; modulos: string[] }>(
+  data: T,
+  ctx: z.RefinementCtx,
+) {
+  const plan = getPlan(data.plan);
+  if (!plan || plan.maxModulosNegocio === null) return;
+  if (data.modulos.length > plan.maxModulosNegocio) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["modulos"],
+      message: `El plan ${plan.nombre} incluye hasta ${plan.maxModulosNegocio} módulo(s) de negocio.`,
+    });
+  }
+}
 
 export const superAdminLoginSchema = z.object({
   email: z.email("Ingresa un correo válido"),
@@ -27,44 +47,55 @@ const slugField = z
   )
   .refine((slug) => !RESERVED_SUBDOMAINS.has(slug), "Ese slug está reservado");
 
-export const onboardClienteSchema = z.object({
-  clienteNombre: z.string().trim().min(1, "Requerido"),
-  slug: slugField,
-  empresaNombreComercial: z.string().trim().min(1, "Requerido"),
-  empresaNombreCorto: z
-    .string()
-    .trim()
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .default(null),
-  empresaRazonSocial: z
-    .string()
-    .trim()
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .default(null),
-  empresaRfc: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .transform((v) => (v === "" ? null : v))
-    .nullable()
-    .default(null),
-  adminNombre: z.string().trim().min(1, "Requerido"),
-  adminEmail: emailField,
-  adminPassword: z
-    .string()
-    .min(1, "La contraseña es obligatoria")
-    .min(6, "Mínimo 6 caracteres"),
-  modulos: z.array(z.string()),
-});
+/** RFC: opcional, pero si se ingresa solo acepta letras y números, sin guiones ni espacios. */
+const rfcField = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .max(13, "Máximo 13 caracteres")
+  .regex(/^[A-Z0-9]*$/, "Solo letras y números")
+  .transform((v) => (v === "" ? null : v))
+  .nullable()
+  .default(null);
+
+export const onboardClienteSchema = z
+  .object({
+    clienteNombre: z.string().trim().min(1, "Requerido"),
+    slug: slugField,
+    plan: planField,
+    empresaNombreComercial: z.string().trim().min(1, "Requerido"),
+    empresaNombreCorto: z
+      .string()
+      .trim()
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .default(null),
+    empresaRazonSocial: z
+      .string()
+      .trim()
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .default(null),
+    empresaRfc: rfcField,
+    adminNombre: z.string().trim().min(1, "Requerido"),
+    adminEmail: emailField,
+    adminPassword: z
+      .string()
+      .min(1, "La contraseña es obligatoria")
+      .min(6, "Mínimo 6 caracteres"),
+    modulos: z.array(z.string()),
+  })
+  .superRefine(refineModulosPorPlan);
 export type OnboardClienteInput = z.input<typeof onboardClienteSchema>;
 
-export const updateClienteSchema = z.object({
-  nombre: z.string().trim().min(1, "Requerido"),
-  activo: z.boolean(),
-  modulos: z.array(z.string()),
-});
+export const updateClienteSchema = z
+  .object({
+    nombre: z.string().trim().min(1, "Requerido"),
+    activo: z.boolean(),
+    plan: planField,
+    modulos: z.array(z.string()),
+  })
+  .superRefine(refineModulosPorPlan);
 export type UpdateClienteInput = z.input<typeof updateClienteSchema>;
 
 export const resetAdminPasswordSchema = z.object({

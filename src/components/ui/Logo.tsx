@@ -24,21 +24,31 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
+type LogoSize = "md" | "lg";
+
+const SIZES: Record<LogoSize, { mark: string; text: string }> = {
+  md: { mark: "h-9 w-9", text: "text-2xl" },
+  /** 20% más grande que "md" (mark: 2.25rem → 2.7rem, texto: 1.5rem → 1.8rem). */
+  lg: { mark: "h-[2.7rem] w-[2.7rem]", text: "text-[1.8rem]" },
+};
+
 type LogoProps = {
   className?: string;
   /** "full" shows the wordmark next to the mark; "icon" shows only the mark. */
   variant?: "full" | "icon";
   href?: string | null;
+  size?: LogoSize;
 };
 
-export function Logo({ className, variant = "full", href = "#top" }: LogoProps) {
+export function Logo({ className, variant = "full", href = "#top", size = "md" }: LogoProps) {
+  const s = SIZES[size];
   const content = (
     <>
-      <span className="relative grid h-9 w-9 shrink-0 place-items-center">
+      <span className={cn("relative grid shrink-0 place-items-center", s.mark)}>
         <LogoMark className="h-full w-full transition-transform duration-500 group-hover:scale-105" />
       </span>
       {variant === "full" && (
-        <span className="font-display text-2xl font-extrabold lowercase tracking-tight text-ink">
+        <span className={cn("font-display font-extrabold lowercase tracking-tight text-ink", s.text)}>
           nuvio
         </span>
       )}

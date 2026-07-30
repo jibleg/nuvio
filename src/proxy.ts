@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/constants";
+import { SESSION_COOKIE_NAME, SUPERADMIN_SESSION_COOKIE_NAME } from "@/lib/auth/constants";
 import { TENANT_HEADER } from "@/lib/tenant/constants";
 import { slugFromHost } from "@/lib/tenant/host";
 
@@ -19,6 +19,13 @@ const isProtected = (pathname: string) =>
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 
+/** Panel interno (staff): vive en `/superadmin`, con su propia cookie de sesión. */
+const SUPERADMIN_PREFIX = "/superadmin";
+const SUPERADMIN_LOGIN_PATH = "/superadmin/login";
+
+const isSuperadminPath = (pathname: string) =>
+  pathname === SUPERADMIN_PREFIX || pathname.startsWith(`${SUPERADMIN_PREFIX}/`);
+
 /**
  * Borde de la app: (1) resuelve el tenant del subdominio y lo publica como
  * header interno para que el servidor lo lea; (2) corta el paso al área
@@ -27,12 +34,26 @@ const isProtected = (pathname: string) =>
  */
 export function proxy(request: NextRequest) {
   const slug = slugFromHost(request.headers.get("host"));
+  const { pathname } = request.nextUrl;
+
+  // El panel interno solo existe en el dominio raíz: un subdominio de cliente
+  // nunca debe poder ni siquiera alcanzar esta ruta.
+  if (slug && isSuperadminPath(pathname)) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  if (
+    isSuperadminPath(pathname) &&
+    pathname !== SUPERADMIN_LOGIN_PATH &&
+    !request.cookies.has(SUPERADMIN_SESSION_COOKIE_NAME)
+  ) {
+    return NextResponse.redirect(new URL(SUPERADMIN_LOGIN_PATH, request.url));
+  }
 
   const requestHeaders = new Headers(request.headers);
   if (slug) requestHeaders.set(TENANT_HEADER, slug);
   else requestHeaders.delete(TENANT_HEADER);
 
-  const { pathname } = request.nextUrl;
   if (isProtected(pathname) && !request.cookies.has(SESSION_COOKIE_NAME)) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";

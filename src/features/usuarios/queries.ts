@@ -1,6 +1,7 @@
 import { findAllPerfiles } from "@/features/rbac";
 import { findAllEmpresas } from "@/features/empresas";
-import { APP_MODULOS } from "@/config/modules";
+import { findModuloKeysByCliente } from "@/features/modulos";
+import { resolveModulos } from "@/config/modules";
 import {
   getUsuarioDetalle,
   listUsuarios,
@@ -22,9 +23,11 @@ export function getUsuarioById(
 export async function getUsuarioFormOptions(
   idCliente: number,
 ): Promise<UsuarioFormOptions> {
-  const [perfiles, empresas] = await Promise.all([
+  const [perfiles, empresas, moduloKeys] = await Promise.all([
     findAllPerfiles(idCliente),
     findAllEmpresas(idCliente),
+    findModuloKeysByCliente(idCliente),
   ]);
-  return { perfiles, empresas, modulos: APP_MODULOS };
+  // Solo se puede asignar a un operador lo que el cliente tiene licenciado.
+  return { perfiles, empresas, modulos: resolveModulos(moduloKeys) };
 }

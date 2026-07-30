@@ -7,3 +7,7 @@ export {
   usuarioTieneModulo,
   replaceModulosForUsuario,
 } from "./repositories/usuario-modulos-repository";
+export {
+  findModuloKeysByCliente,
+  replaceModulosForCliente,
+} from "./repositories/cliente-modulos-repository";

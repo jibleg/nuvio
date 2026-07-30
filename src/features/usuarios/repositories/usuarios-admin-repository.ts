@@ -19,7 +19,7 @@ export type CreateUsuarioData = {
   login: string;
   passwordHash: string;
   nombre: string;
-  email: string | null;
+  email: string;
   perfilIds: number[];
   empresaIds: number[];
   moduloKeys: string[];
@@ -27,7 +27,7 @@ export type CreateUsuarioData = {
 
 export type UpdateUsuarioData = {
   nombre: string;
-  email: string | null;
+  email: string;
   passwordHash: string | null;
   activo: boolean;
   perfilIds: number[];
@@ -147,6 +147,30 @@ export async function existsLogin(
         ? and(eq(usuarios.login, login), eq(usuarios.idCliente, idCliente))
         : and(
             eq(usuarios.login, login),
+            eq(usuarios.idCliente, idCliente),
+            ne(usuarios.id, exceptId),
+          ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+export async function existsEmail(
+  email: string,
+  idCliente: number,
+  exceptId?: number,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: usuarios.id })
+    .from(usuarios)
+    .where(
+      exceptId === undefined
+        ? and(
+            eq(sql`lower(${usuarios.email})`, email.toLowerCase()),
+            eq(usuarios.idCliente, idCliente),
+          )
+        : and(
+            eq(sql`lower(${usuarios.email})`, email.toLowerCase()),
             eq(usuarios.idCliente, idCliente),
             ne(usuarios.id, exceptId),
           ),

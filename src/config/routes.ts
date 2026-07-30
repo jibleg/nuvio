@@ -19,6 +19,11 @@ export const ROUTES = {
   facturacion: "/facturacion",
   pos: "/pos",
   inventario: "/inventario",
+
+  // Panel interno (staff de Nuvio, gestión de clientes/tenants)
+  superadminLogin: "/superadmin/login",
+  superadmin: "/superadmin",
+  superadminClientes: "/superadmin/clientes",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

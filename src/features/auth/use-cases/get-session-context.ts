@@ -1,7 +1,7 @@
 import { hashSessionToken } from "@/lib/auth/tokens";
 import { getUserPermissionCodes, findPerfilNamesByUsuario } from "@/features/rbac";
 import { findEmpresasByUsuario } from "@/features/empresas";
-import { findModuloKeysByUsuario } from "@/features/modulos";
+import { findModuloKeysByCliente, findModuloKeysByUsuario } from "@/features/modulos";
 import { getCurrentTenant } from "@/features/tenant";
 import { findSesionVigenteConUsuario } from "../repositories/sesiones-repository";
 import type { SessionContext } from "../types";
@@ -29,12 +29,18 @@ export async function getSessionContext(
     return null;
   }
 
-  const [permisos, empresas, modulos, perfiles] = await Promise.all([
+  const [permisos, empresas, modulosUsuario, modulosCliente, perfiles] = await Promise.all([
     getUserPermissionCodes(usuario.id),
     findEmpresasByUsuario(usuario.id),
     findModuloKeysByUsuario(usuario.id),
+    findModuloKeysByCliente(tenant.id),
     findPerfilNamesByUsuario(usuario.id),
   ]);
+
+  // El cliente licencia módulos (paquete); el operador recibe un subconjunto.
+  // Si el cliente pierde un módulo, ningún operador conserva acceso a él aunque
+  // su asignación individual (`usuario_modulos`) no se haya actualizado.
+  const modulos = modulosUsuario.filter((key) => modulosCliente.includes(key));
 
   const empresaActiva =
     empresas.find((empresa) => empresa.id === sesion.idEmpresaActiva) ??

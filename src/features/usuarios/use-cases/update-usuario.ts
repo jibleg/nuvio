@@ -1,10 +1,13 @@
 import bcrypt from "bcryptjs";
-import { updateUsuario } from "../repositories/usuarios-admin-repository";
+import {
+  existsEmail,
+  updateUsuario,
+} from "../repositories/usuarios-admin-repository";
 import type { UsuarioMutationResult } from "../types";
 
 export type UpdateUsuarioData = {
   nombre: string;
-  email: string | null;
+  email: string;
   password: string | null;
   activo: boolean;
   perfiles: number[];
@@ -20,6 +23,9 @@ export async function updateUsuarioUseCase(
 ): Promise<UsuarioMutationResult> {
   if (id === currentUserId && !data.activo) {
     return { ok: false, error: "No puedes desactivar tu propia cuenta." };
+  }
+  if (await existsEmail(data.email, idCliente, id)) {
+    return { ok: false, error: "Ya existe un usuario con ese correo." };
   }
 
   await updateUsuario(id, idCliente, {

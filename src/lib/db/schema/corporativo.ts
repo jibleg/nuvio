@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { integer, pgSchema, smallint, timestamp, varchar } from "drizzle-orm/pg-core";
 
 /**
@@ -9,7 +10,9 @@ export const corporativo = pgSchema("corporativo");
 
 /** Cliente = tenant raíz (organización que adquiere Nuvio). Se resuelve por subdominio (`slug`). */
 export const clientes = corporativo.table("clientes", {
-  id: integer("cve_cliente").primaryKey(),
+  id: integer("cve_cliente")
+    .primaryKey()
+    .default(sql`nextval('corporativo.sq_corp_clientes')`),
   slug: varchar("slug", { length: 63 }).notNull(),
   nombre: varchar("nombre", { length: 150 }).notNull(),
   activo: smallint("activo").notNull().default(1),
@@ -20,9 +23,56 @@ export const empresas = corporativo.table("empresas", {
   id: integer("cve_empresa").primaryKey(),
   idCliente: integer("cve_cliente").notNull(),
   nombreComercial: varchar("nombre_comercial").notNull(),
+  descripcion: varchar("descripcion").notNull(),
   nombreCorto: varchar("nombre_corto"),
   razonSocial: varchar("razon_social"),
   rfc: varchar("rfc"),
   activo: integer("activo"),
   idRegimen: integer("cve_regimen"),
+});
+
+/**
+ * Staff de Nuvio con acceso al panel interno (gestión de clientes/tenants).
+ * Aislado a propósito de `administracion.usuarios`: no pertenece a ningún
+ * cliente, así que una brecha en un tenant nunca puede escalar hasta aquí.
+ */
+export const superAdmins = corporativo.table("super_admins", {
+  id: integer("cve_super_admin")
+    .primaryKey()
+    .default(sql`nextval('corporativo.sq_corp_super_admins')`),
+  email: varchar("email").notNull(),
+  passwordHash: varchar("password").notNull(),
+  nombre: varchar("nombre").notNull(),
+  activo: smallint("activo").notNull().default(1),
+  fechaAlta: timestamp("fecha_alta", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Módulos LICENCIADOS por cliente (paquete/plan). Distinto de
+ * `administracion.usuario_modulos` (acceso por operador, un subconjunto de esto).
+ */
+export const clienteModulos = corporativo.table("cliente_modulos", {
+  id: integer("cve_cliente_modulo")
+    .primaryKey()
+    .default(sql`nextval('corporativo.sq_corp_cliente_modulos')`),
+  idCliente: integer("cve_cliente").notNull(),
+  moduloKey: varchar("modulo_key", { length: 50 }).notNull(),
+  fechaAlta: timestamp("fecha_alta", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** Sesiones del panel interno (respaldo de su propia cookie httpOnly). */
+export const superAdminSesiones = corporativo.table("super_admin_sesiones", {
+  id: integer("cve_sesion")
+    .primaryKey()
+    .default(sql`nextval('corporativo.sq_corp_super_admin_sesiones')`),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  idSuperAdmin: integer("cve_super_admin").notNull(),
+  fechaCreacion: timestamp("fecha_creacion", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  fechaExpira: timestamp("fecha_expira", { withTimezone: true }).notNull(),
+  fechaUltimoUso: timestamp("fecha_ultimo_uso", { withTimezone: true }),
+  ip: varchar("ip", { length: 64 }),
+  userAgent: varchar("user_agent", { length: 512 }),
+  revocada: smallint("revocada").notNull().default(0),
 });

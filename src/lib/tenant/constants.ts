@@ -2,4 +2,10 @@
 export const TENANT_HEADER = "x-nuvio-tenant";
 
 /** Subdominios que NO representan a un cliente (root/marketing/infra). */
-export const RESERVED_SUBDOMAINS = new Set(["www", "app", "admin", "api"]);
+export const RESERVED_SUBDOMAINS = new Set([
+  "www",
+  "app",
+  "admin",
+  "api",
+  "superadmin",
+]);

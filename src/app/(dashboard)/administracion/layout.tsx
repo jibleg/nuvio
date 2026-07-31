@@ -47,6 +47,14 @@ export default async function AdministracionLayout({
       accent: "sunrise",
     });
   }
+  if (hasPermission(session.permisos, "catalogos.clientes")) {
+    items.push({
+      label: "Clientes y proveedores",
+      href: ROUTES.clientesProveedores,
+      icon: "handshake",
+      accent: "sky",
+    });
+  }
 
   return (
     <ModuleShell titulo="Administración" icon="shield" items={items}>

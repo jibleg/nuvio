@@ -12,6 +12,9 @@ const empresaColumns = {
   idEmpresaMatriz: empresas.idEmpresaMatriz,
 };
 
+/** Filas de tipo "empresa propia" (matriz/sucursal); excluye contactos de facturación (tipo=2, ver `@/features/contactos-facturacion`). */
+const esEmpresaPropia = eq(empresas.tipo, 1);
+
 /** Empresas a las que un usuario tiene acceso (según `usuario_empresas`). */
 export async function findEmpresasByUsuario(
   usuarioId: number,
@@ -20,7 +23,7 @@ export async function findEmpresasByUsuario(
     .select(empresaColumns)
     .from(usuarioEmpresas)
     .innerJoin(empresas, eq(empresas.id, usuarioEmpresas.idEmpresa))
-    .where(eq(usuarioEmpresas.idUsuario, usuarioId));
+    .where(and(eq(usuarioEmpresas.idUsuario, usuarioId), esEmpresaPropia));
 }
 
 /** Empresas activas de un cliente (para asignación en administración). */
@@ -28,7 +31,7 @@ export async function findAllEmpresas(idCliente: number): Promise<Empresa[]> {
   return db
     .select(empresaColumns)
     .from(empresas)
-    .where(and(eq(empresas.activo, 1), eq(empresas.idCliente, idCliente)))
+    .where(and(eq(empresas.activo, 1), eq(empresas.idCliente, idCliente), esEmpresaPropia))
     .orderBy(empresas.nombreComercial);
 }
 

@@ -1,13 +1,17 @@
 /**
  * Sucursal = una fila de `corporativo.empresas` con `idEmpresaMatriz` distinto
  * de null. La matriz de un cliente es la fila con `idEmpresaMatriz === null`.
- * RFC y razón social se heredan de la matriz al crear (no son editables).
+ * RFC y razón social viven en la propia fila, pero por defecto quedan en NULL:
+ * una sucursal con `rfc`/`razonSocial` NULL hereda (en vivo, no por copia) los
+ * de su matriz al momento de facturar. Solo si la sucursal factura con una
+ * razón social propia (certificado/CSD distinto) se llenan con datos propios.
  */
 export type SucursalListItem = {
   id: number;
   nombreComercial: string;
   nombreCorto: string | null;
   esMatriz: boolean;
+  esFiscalPropio: boolean;
   calle: string | null;
   colonia: string | null;
   ciudad: string | null;
@@ -18,13 +22,20 @@ export type SucursalListItem = {
 };
 
 export type SucursalDetalle = SucursalListItem & {
-  rfc: string | null;
-  razonSocial: string | null;
+  /** Valores propios de esta fila; NULL cuando hereda de la matriz. */
+  rfcPropio: string | null;
+  razonSocialPropia: string | null;
+  /** Con los que esta sucursal facturaría hoy: propios o heredados de la matriz. */
+  rfcEfectivo: string | null;
+  razonSocialEfectiva: string | null;
 };
 
 export type SucursalFormData = {
   nombreComercial: string;
   nombreCorto: string | null;
+  usaFiscalPropio: boolean;
+  razonSocialPropia: string | null;
+  rfcPropio: string | null;
   calle: string | null;
   colonia: string | null;
   ciudad: string | null;

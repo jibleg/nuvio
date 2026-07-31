@@ -4,9 +4,9 @@ import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AlertCircle, Loader2, MapPin, Save } from "lucide-react";
-import { createSucursalAction, updateSucursalAction } from "../actions";
-import type { SucursalDetalle } from "../types";
+import { AlertCircle, Loader2, Save } from "lucide-react";
+import { createContactoAction, updateContactoAction } from "../actions";
+import type { ContactoDetalle, TipoContacto } from "../types";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all placeholder:text-muted focus:border-brand-400 focus:ring-4 focus:ring-brand-400/20";
@@ -14,44 +14,42 @@ const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
 
 /**
  * Schema local para feedback inmediato en el form (strings tal como los
- * produce el DOM). El schema autoritativo con las transformaciones (código
- * postal a número, etc.) vive en `../schemas.ts` y corre en el servidor.
+ * produce el DOM). El schema autoritativo con las transformaciones vive en
+ * `../schemas.ts` y corre en el servidor.
  */
-const clientSchema = z
-  .object({
-    nombreComercial: z.string().trim().min(1, "Requerido"),
-    nombreCorto: z.string().trim(),
-    usaFiscalPropio: z.boolean(),
-    razonSocialPropia: z.string().trim(),
-    rfcPropio: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
-    calle: z.string().trim(),
-    colonia: z.string().trim(),
-    ciudad: z.string().trim(),
-    codigoPostal: z
-      .string()
-      .trim()
-      .refine((v) => v === "" || /^\d{5}$/.test(v), "5 dígitos"),
-    telefono: z.string().trim(),
-    email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Correo inválido"))]),
-  })
-  .refine((data) => !data.usaFiscalPropio || (data.razonSocialPropia.trim() && data.rfcPropio.trim()), {
-    message: "Captura razón social y RFC propios",
-    path: ["razonSocialPropia"],
-  });
+const clientSchema = z.object({
+  tipo: z.enum(["cliente", "proveedor"]),
+  razonSocial: z.string().trim().min(1, "Requerido"),
+  rfc: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .min(1, "Requerido")
+    .max(13, "Máximo 13 caracteres")
+    .regex(/^[A-Z0-9]+$/, "Solo letras y números"),
+  nombreComercial: z.string().trim(),
+  calle: z.string().trim(),
+  colonia: z.string().trim(),
+  ciudad: z.string().trim(),
+  codigoPostal: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^\d{5}$/.test(v), "5 dígitos"),
+  telefono: z.string().trim(),
+  email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Correo inválido"))]),
+});
 type FormValues = z.infer<typeof clientSchema>;
 
-export function SucursalForm({
+export function ContactoForm({
   mode,
   initial,
+  tipoInicial,
   onSuccess,
   onCancel,
 }: {
   mode: "create" | "edit";
-  initial?: SucursalDetalle;
+  initial?: ContactoDetalle;
+  tipoInicial?: TipoContacto;
   onSuccess: () => void;
   onCancel: () => void;
 }) {
@@ -64,11 +62,10 @@ export function SucursalForm({
   } = useForm<FormValues>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
+      tipo: initial?.tipo ?? tipoInicial ?? "cliente",
+      razonSocial: initial?.razonSocial ?? "",
+      rfc: initial?.rfc ?? "",
       nombreComercial: initial?.nombreComercial ?? "",
-      nombreCorto: initial?.nombreCorto ?? "",
-      usaFiscalPropio: initial?.esFiscalPropio ?? false,
-      razonSocialPropia: initial?.razonSocialPropia ?? "",
-      rfcPropio: initial?.rfcPropio ?? "",
       calle: initial?.calle ?? "",
       colonia: initial?.colonia ?? "",
       ciudad: initial?.ciudad ?? "",
@@ -77,7 +74,7 @@ export function SucursalForm({
       email: initial?.email ?? "",
     },
   });
-  const usaFiscalPropio = watch("usaFiscalPropio");
+  const tipo = watch("tipo");
   const [activo, setActivo] = useState(initial?.activo ?? true);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -87,8 +84,8 @@ export function SucursalForm({
     startTransition(async () => {
       const result =
         mode === "create"
-          ? await createSucursalAction(values)
-          : await updateSucursalAction(initial!.id, { ...values, activo });
+          ? await createContactoAction(values)
+          : await updateContactoAction(initial!.id, { ...values, activo });
       if (result?.error) {
         setServerError(result.error);
         return;
@@ -99,69 +96,42 @@ export function SucursalForm({
 
   return (
     <form onSubmit={handleSubmit(onValid)} className="space-y-5" noValidate>
-      {initial?.esMatriz ? (
-        <div className="flex items-start gap-2 rounded-xl bg-brand-50 px-3.5 py-2.5 text-xs text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          {`Datos fiscales de la matriz: ${initial.razonSocialEfectiva ?? "—"}${initial.rfcEfectivo ? ` · ${initial.rfcEfectivo}` : ""}.`}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <span className={labelClass}>Razón social propia</span>
-              <p className="text-xs text-muted">
-                Por defecto la sucursal factura con los datos de la matriz
-                {initial ? `: ${initial.razonSocialEfectiva ?? "—"} · ${initial.rfcEfectivo ?? "—"}` : ""}. Actívalo
-                solo si esta sucursal factura con un RFC y certificado (CSD) distintos.
-              </p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={usaFiscalPropio}
-              aria-label="Usar razón social propia"
-              onClick={() => setValue("usaFiscalPropio", !usaFiscalPropio, { shouldValidate: true })}
-              className="mt-0.5 shrink-0"
-            >
-              <span
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${usaFiscalPropio ? "bg-brand-500" : "bg-line"}`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${usaFiscalPropio ? "translate-x-6" : "translate-x-1"}`}
-                />
-              </span>
-            </button>
-          </div>
-
-          {usaFiscalPropio && (
-            <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-              <Field label="Razón social" error={errors.razonSocialPropia?.message}>
-                <input className={inputClass} {...register("razonSocialPropia")} />
-              </Field>
-              <Field label="RFC" error={errors.rfcPropio?.message}>
-                <input
-                  className={inputClass}
-                  maxLength={13}
-                  style={{ textTransform: "uppercase" }}
-                  {...register("rfcPropio")}
-                />
-              </Field>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+        <span className={labelClass}>Tipo</span>
+        <div className="mb-4 inline-flex rounded-full border border-line bg-cloud/60 p-1">
+          {(["cliente", "proveedor"] as const).map((opcion) => (
+            <button
+              key={opcion}
+              type="button"
+              onClick={() => setValue("tipo", opcion, { shouldValidate: true })}
+              className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                tipo === opcion
+                  ? "bg-brand-700 text-white dark:bg-brand-600 dark:text-brand-950"
+                  : "text-ink-soft hover:text-brand-600"
+              }`}
+            >
+              {opcion === "cliente" ? "Cliente" : "Proveedor"}
+            </button>
+          ))}
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nombre comercial" error={errors.nombreComercial?.message}>
+          <Field label="Razón social" error={errors.razonSocial?.message}>
+            <input className={inputClass} {...register("razonSocial")} />
+          </Field>
+          <Field label="RFC" error={errors.rfc?.message}>
             <input
               className={inputClass}
-              placeholder="Ej. Sucursal Centro"
-              {...register("nombreComercial")}
+              maxLength={13}
+              style={{ textTransform: "uppercase" }}
+              {...register("rfc")}
             />
           </Field>
-          <Field label="Nombre corto">
-            <input className={inputClass} placeholder="Centro" {...register("nombreCorto")} />
+          <Field label="Nombre comercial">
+            <input className={inputClass} placeholder="Opcional" {...register("nombreComercial")} />
+          </Field>
+          <Field label="Correo" error={errors.email?.message}>
+            <input className={inputClass} type="email" {...register("email")} />
           </Field>
           <Field label="Calle y número">
             <input className={inputClass} {...register("calle")} />
@@ -184,12 +154,9 @@ export function SucursalForm({
           <Field label="Teléfono">
             <input className={inputClass} {...register("telefono")} />
           </Field>
-          <Field label="Correo" error={errors.email?.message}>
-            <input className={inputClass} type="email" {...register("email")} />
-          </Field>
         </div>
 
-        {mode === "edit" && !initial?.esMatriz && (
+        {mode === "edit" && (
           <div className="mt-4">
             <span className={labelClass}>Estado</span>
             <button
@@ -206,7 +173,7 @@ export function SucursalForm({
                   className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${activo ? "translate-x-6" : "translate-x-1"}`}
                 />
               </span>
-              {activo ? "Sucursal activa" : "Sucursal inactiva"}
+              {activo ? "Activo" : "Inactivo"}
             </button>
           </div>
         )}
@@ -226,7 +193,7 @@ export function SucursalForm({
           className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 disabled:opacity-70 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {mode === "create" ? "Crear sucursal" : "Guardar cambios"}
+          {mode === "create" ? "Crear contacto" : "Guardar cambios"}
         </button>
         <button
           type="button"

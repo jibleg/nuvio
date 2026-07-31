@@ -5,6 +5,7 @@ import type { PlanKey } from "@/config/plans";
 import {
   clienteModulos,
   clientes,
+  contactosFacturacion,
   empresas,
   perfilPermisos,
   perfilUsuarios,
@@ -15,6 +16,9 @@ import {
   usuarios,
 } from "@/lib/db/schema";
 import type { ClienteDetalle, ClienteListItem } from "../types";
+
+/** Filas de tipo "empresa propia" (matriz/sucursal); excluye contactos de facturación (tipo=2, ver `@/features/contactos-facturacion`). */
+const esEmpresaPropia = eq(empresas.tipo, 1);
 
 export async function listClientes(): Promise<ClienteListItem[]> {
   const [rows, empresaCounts, usuarioCounts, moduloRows] = await Promise.all([
@@ -35,6 +39,7 @@ export async function listClientes(): Promise<ClienteListItem[]> {
         total: sql<number>`count(*)::int`,
       })
       .from(empresas)
+      .where(esEmpresaPropia)
       .groupBy(empresas.idCliente),
     db
       .select({
@@ -100,7 +105,7 @@ export async function getClienteDetalle(
     db
       .select({ total: sql<number>`count(*)::int` })
       .from(empresas)
-      .where(eq(empresas.idCliente, id)),
+      .where(and(eq(empresas.idCliente, id), esEmpresaPropia)),
   ]);
 
   return {
@@ -216,6 +221,7 @@ export async function deleteCliente(id: number): Promise<void> {
     }
 
     await tx.delete(clienteModulos).where(eq(clienteModulos.idCliente, id));
+    await tx.delete(contactosFacturacion).where(eq(contactosFacturacion.idCliente, id));
 
     if (empresaIds.length > 0) {
       await tx.delete(empresas).where(inArray(empresas.id, empresaIds));
@@ -240,7 +246,7 @@ export async function getStats() {
         activos: sql<number>`count(*) filter (where ${clientes.activo} = 1)::int`,
       })
       .from(clientes),
-    db.select({ total: sql<number>`count(*)::int` }).from(empresas),
+    db.select({ total: sql<number>`count(*)::int` }).from(empresas).where(esEmpresaPropia),
     db.select({ total: sql<number>`count(*)::int` }).from(usuarios),
   ]);
 

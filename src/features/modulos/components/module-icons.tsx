@@ -1,5 +1,6 @@
 import {
   FileText,
+  Handshake,
   Home,
   KeyRound,
   LayoutGrid,
@@ -25,6 +26,7 @@ const ICONS: Record<string, LucideIcon> = {
   sliders: SlidersHorizontal,
   grid: LayoutGrid,
   store: Store,
+  handshake: Handshake,
 };
 
 /** Resuelve una clave de icono a su icono de lucide (módulo plano, server/client). */

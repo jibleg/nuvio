@@ -109,11 +109,21 @@ export function SucursalesAdmin({
                       <p className="font-semibold text-ink">
                         {sucursal.nombreCorto ?? sucursal.nombreComercial}
                       </p>
-                      {sucursal.esMatriz && (
-                        <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-200">
-                          Matriz
-                        </span>
-                      )}
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {sucursal.esMatriz && (
+                          <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:text-brand-200">
+                            Matriz
+                          </span>
+                        )}
+                        {!sucursal.esMatriz && sucursal.esFiscalPropio && (
+                          <span
+                            className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-300"
+                            title="Factura con razón social propia, distinta de la matriz"
+                          >
+                            Razón social propia
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>

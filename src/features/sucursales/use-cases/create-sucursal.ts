@@ -24,8 +24,8 @@ export async function createSucursalUseCase(
   const id = await createSucursalRepo({
     idCliente,
     idEmpresaMatriz: matriz.id,
-    rfc: matriz.rfc,
-    razonSocial: matriz.razonSocial,
+    rfc: data.usaFiscalPropio ? data.rfcPropio : null,
+    razonSocial: data.usaFiscalPropio ? data.razonSocialPropia : null,
     form: data,
   });
   return { ok: true, id };

@@ -39,6 +39,34 @@ export const empresas = corporativo.table("empresas", {
   email: varchar("email"),
   activo: integer("activo"),
   idRegimen: integer("cve_regimen"),
+  /** 1 = empresa propia (matriz/sucursal); 2 = contacto de facturación (legado, ver `contactosFacturacion`). */
+  tipo: integer("tipo"),
+});
+
+/**
+ * Clientes y proveedores de facturación (a quién facturas / quién te
+ * factura) — distinto de `empresas` (tu propia matriz/sucursales). En
+ * factura-facil ambos conceptos vivían mezclados en una sola tabla
+ * (`empresas.tipo` 1/2); aquí quedan separados para que "Sucursales" no se
+ * enrede con tu directorio de contactos de facturación.
+ */
+export const contactosFacturacion = corporativo.table("contactos_facturacion", {
+  id: integer("cve_contacto_facturacion")
+    .primaryKey()
+    .default(sql`nextval('corporativo.sq_corp_contactos_facturacion')`),
+  idCliente: integer("cve_cliente").notNull(),
+  /** 1 = cliente (a quien facturas), 2 = proveedor (quien te factura). */
+  tipo: smallint("tipo").notNull(),
+  razonSocial: varchar("razon_social").notNull(),
+  rfc: varchar("rfc").notNull(),
+  nombreComercial: varchar("nombre_comercial"),
+  calle: varchar("calle"),
+  colonia: varchar("colonia"),
+  ciudad: varchar("ciudad"),
+  codigoPostal: integer("codigo_postal"),
+  telefono: varchar("telefono"),
+  email: varchar("email"),
+  activo: smallint("activo").notNull().default(1),
 });
 
 /**

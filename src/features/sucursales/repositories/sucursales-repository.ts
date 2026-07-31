@@ -1,3 +1,4 @@
+import { alias } from "drizzle-orm/pg-core";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { empresas } from "@/lib/db/schema";
@@ -8,6 +9,7 @@ const listColumns = {
   nombreComercial: empresas.nombreComercial,
   nombreCorto: empresas.nombreCorto,
   idEmpresaMatriz: empresas.idEmpresaMatriz,
+  rfc: empresas.rfc,
   calle: empresas.calle,
   colonia: empresas.colonia,
   ciudad: empresas.ciudad,
@@ -22,6 +24,7 @@ type ListRow = {
   nombreComercial: string;
   nombreCorto: string | null;
   idEmpresaMatriz: number | null;
+  rfc: string | null;
   calle: string | null;
   colonia: string | null;
   ciudad: string | null;
@@ -37,6 +40,7 @@ function toListItem(row: ListRow): SucursalListItem {
     nombreComercial: row.nombreComercial,
     nombreCorto: row.nombreCorto,
     esMatriz: row.idEmpresaMatriz === null,
+    esFiscalPropio: row.rfc !== null,
     calle: row.calle,
     colonia: row.colonia,
     ciudad: row.ciudad,
@@ -46,6 +50,9 @@ function toListItem(row: ListRow): SucursalListItem {
     activo: row.activo !== 0,
   };
 }
+
+/** Filas de tipo "empresa propia" (matriz/sucursal); excluye contactos de facturación (tipo=2, ver `@/features/contactos-facturacion`). */
+const esEmpresaPropia = eq(empresas.tipo, 1);
 
 /** La matriz del cliente: la única fila con `idEmpresaMatriz IS NULL`. */
 export async function findMatriz(
@@ -59,7 +66,7 @@ export async function findMatriz(
       razonSocial: empresas.razonSocial,
     })
     .from(empresas)
-    .where(and(eq(empresas.idCliente, idCliente), isNull(empresas.idEmpresaMatriz)))
+    .where(and(eq(empresas.idCliente, idCliente), isNull(empresas.idEmpresaMatriz), esEmpresaPropia))
     .limit(1);
   return row ?? null;
 }
@@ -69,22 +76,36 @@ export async function listSucursales(idCliente: number): Promise<SucursalListIte
   const rows = await db
     .select(listColumns)
     .from(empresas)
-    .where(eq(empresas.idCliente, idCliente))
+    .where(and(eq(empresas.idCliente, idCliente), esEmpresaPropia))
     .orderBy(asc(empresas.idEmpresaMatriz), asc(empresas.nombreComercial));
   return rows.map(toListItem);
 }
+
+const matrizAlias = alias(empresas, "matriz");
 
 export async function getSucursalDetalle(
   id: number,
   idCliente: number,
 ): Promise<SucursalDetalle | null> {
   const [row] = await db
-    .select({ ...listColumns, rfc: empresas.rfc, razonSocial: empresas.razonSocial })
+    .select({
+      ...listColumns,
+      razonSocial: empresas.razonSocial,
+      matrizRfc: matrizAlias.rfc,
+      matrizRazonSocial: matrizAlias.razonSocial,
+    })
     .from(empresas)
-    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente)))
+    .leftJoin(matrizAlias, eq(empresas.idEmpresaMatriz, matrizAlias.id))
+    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente), esEmpresaPropia))
     .limit(1);
   if (!row) return null;
-  return { ...toListItem(row), rfc: row.rfc, razonSocial: row.razonSocial };
+  return {
+    ...toListItem(row),
+    rfcPropio: row.rfc,
+    razonSocialPropia: row.razonSocial,
+    rfcEfectivo: row.rfc ?? row.matrizRfc,
+    razonSocialEfectiva: row.razonSocial ?? row.matrizRazonSocial,
+  };
 }
 
 /** Total de empresas (matriz + sucursales) del cliente, para el tope del plan. */
@@ -92,7 +113,7 @@ export async function countEmpresas(idCliente: number): Promise<number> {
   const [row] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(empresas)
-    .where(eq(empresas.idCliente, idCliente));
+    .where(and(eq(empresas.idCliente, idCliente), esEmpresaPropia));
   return row?.total ?? 0;
 }
 
@@ -124,6 +145,7 @@ export async function createSucursal(data: {
     rfc: data.rfc,
     razonSocial: data.razonSocial,
     activo: 1,
+    tipo: 1,
   });
   return id;
 }
@@ -133,12 +155,18 @@ export async function updateSucursal(
   idCliente: number,
   data: UpdateSucursalData,
 ): Promise<void> {
+  const nuevoRfc = data.usaFiscalPropio ? data.rfcPropio : null;
+  const nuevaRazonSocial = data.usaFiscalPropio ? data.razonSocialPropia : null;
   await db
     .update(empresas)
     .set({
       nombreComercial: data.nombreComercial,
       descripcion: data.nombreComercial,
       nombreCorto: data.nombreCorto,
+      // La matriz nunca "hereda"; sus propios rfc/razón social (fijados en el
+      // onboarding) se dejan intactos pase lo que pase en `usaFiscalPropio`.
+      rfc: sql`case when ${empresas.idEmpresaMatriz} is not null then ${nuevoRfc} else ${empresas.rfc} end`,
+      razonSocial: sql`case when ${empresas.idEmpresaMatriz} is not null then ${nuevaRazonSocial} else ${empresas.razonSocial} end`,
       calle: data.calle,
       colonia: data.colonia,
       ciudad: data.ciudad,
@@ -160,6 +188,7 @@ export async function setActivo(id: number, idCliente: number, activo: boolean):
         eq(empresas.id, id),
         eq(empresas.idCliente, idCliente),
         sql`${empresas.idEmpresaMatriz} is not null`,
+        esEmpresaPropia,
       ),
     );
 }

@@ -8,6 +8,8 @@ export type Cliente = {
   slug: string;
   nombre: string;
   plan: PlanKey;
+  /** Gate de Finkok: nace en 'sandbox', solo Nuvio (superadmin) lo pasa a 'produccion'. */
+  ambienteTimbrado: "sandbox" | "produccion";
 };
 
 /** Cliente activo por su slug (subdominio). Devuelve null si no existe o está inactivo. */
@@ -18,10 +20,13 @@ export async function findClienteBySlug(slug: string): Promise<Cliente | null> {
       slug: clientes.slug,
       nombre: clientes.nombre,
       plan: clientes.plan,
+      ambienteTimbrado: clientes.ambienteTimbrado,
     })
     .from(clientes)
     .where(and(eq(sql`lower(${clientes.slug})`, slug.toLowerCase()), eq(clientes.activo, 1)))
     .limit(1);
 
-  return row ? { ...row, plan: row.plan as PlanKey } : null;
+  return row
+    ? { ...row, plan: row.plan as PlanKey, ambienteTimbrado: row.ambienteTimbrado as "sandbox" | "produccion" }
+    : null;
 }

@@ -36,7 +36,7 @@ export const APP_MODULOS: AppModulo[] = [
     descripcion: "CFDI 4.0: emite, timbra y consulta tus facturas.",
     icon: "file-text",
     homeHref: "/facturacion",
-    disponible: false,
+    disponible: true,
   },
   {
     key: "pos",

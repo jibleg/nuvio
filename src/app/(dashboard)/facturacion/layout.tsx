@@ -14,7 +14,8 @@ export default async function FacturacionLayout({
       titulo="Facturación"
       icon="file-text"
       items={[
-        { label: "Inicio", href: ROUTES.facturacion, icon: "home", accent: "brand", exact: true },
+        { label: "Consultar facturas", href: ROUTES.facturacion, icon: "search", accent: "brand", exact: true },
+        { label: "Nueva factura", href: `${ROUTES.facturacion}/nueva`, icon: "plus-circle", accent: "aurora" },
       ]}
     >
       {children}

@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { integer, pgSchema, smallint, timestamp, varchar } from "drizzle-orm/pg-core";
+import { customType, integer, pgSchema, smallint, timestamp, varchar } from "drizzle-orm/pg-core";
+
+/** Columna `bytea` cruda (certificados/llaves CSD, secretos cifrados). */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 /**
  * Mapeo Drizzle del schema `corporativo`. Por ahora solo se mapean `clientes` y
@@ -19,6 +26,8 @@ export const clientes = corporativo.table("clientes", {
   /** Plan comercial contratado: limita empresas y módulos de negocio (ver src/config/plans.ts). */
   plan: varchar("plan", { length: 20 }).notNull().default("empresarial"),
   fechaAlta: timestamp("fecha_alta", { withTimezone: true }).notNull().defaultNow(),
+  /** Gate de seguridad: nace en 'sandbox', solo Nuvio (superadmin) lo pasa a 'produccion'. */
+  ambienteTimbrado: varchar("ambiente_timbrado", { length: 10 }).notNull().default("sandbox"),
 });
 
 export const empresas = corporativo.table("empresas", {
@@ -41,6 +50,22 @@ export const empresas = corporativo.table("empresas", {
   idRegimen: integer("cve_regimen"),
   /** 1 = empresa propia (matriz/sucursal); 2 = contacto de facturación (legado, ver `contactosFacturacion`). */
   tipo: integer("tipo"),
+  /** Certificado de sello digital (CSD) para timbrar CFDI a nombre de esta empresa. */
+  signCer: bytea("sign_cer"),
+  signKey: bytea("sign_key"),
+  /** Contraseña de `signKey` cifrada (AES-256-GCM, ver `@/lib/crypto/secrets`). */
+  signPasswordEnc: bytea("sign_password_enc"),
+  signNumeroCertificado: varchar("sign_numero_certificado", { length: 30 }),
+  signValidoDesde: timestamp("sign_valido_desde", { withTimezone: true }),
+  signValidoHasta: timestamp("sign_valido_hasta", { withTimezone: true }),
+  /** Serie del CFDI (opcional, prefijo de folio a nivel de empresa). */
+  serie: varchar("serie", { length: 5 }),
+});
+
+/** Folio consecutivo por empresa (contador transaccional, ver `empresa-folios-repository.ts`). */
+export const empresaFolios = corporativo.table("empresa_folios", {
+  idEmpresa: integer("cve_empresa").primaryKey(),
+  siguienteFolio: integer("siguiente_folio").notNull().default(1),
 });
 
 /**
@@ -66,6 +91,12 @@ export const contactosFacturacion = corporativo.table("contactos_facturacion", {
   codigoPostal: integer("codigo_postal"),
   telefono: varchar("telefono"),
   email: varchar("email"),
+  /** Régimen fiscal SAT — requerido por el CFDI 4.0 (`RegimenFiscalReceptor`), nullable: contactos legados no lo tienen. */
+  idRegimen: integer("cve_regimen"),
+  /** Uso de CFDI, forma y método de pago habituales — prellenan la factura nueva, editables ahí. */
+  idUso: integer("cve_uso"),
+  idFormaPago: integer("cve_forma_pago"),
+  idMetodo: integer("cve_metodo"),
   activo: smallint("activo").notNull().default(1),
 });
 

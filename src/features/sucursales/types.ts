@@ -25,9 +25,11 @@ export type SucursalDetalle = SucursalListItem & {
   /** Valores propios de esta fila; NULL cuando hereda de la matriz. */
   rfcPropio: string | null;
   razonSocialPropia: string | null;
+  idRegimenPropio: number | null;
   /** Con los que esta sucursal facturaría hoy: propios o heredados de la matriz. */
   rfcEfectivo: string | null;
   razonSocialEfectiva: string | null;
+  idRegimenEfectivo: number | null;
 };
 
 export type SucursalFormData = {
@@ -36,6 +38,7 @@ export type SucursalFormData = {
   usaFiscalPropio: boolean;
   razonSocialPropia: string | null;
   rfcPropio: string | null;
+  idRegimen: number | null;
   calle: string | null;
   colonia: string | null;
   ciudad: string | null;

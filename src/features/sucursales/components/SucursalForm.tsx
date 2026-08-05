@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AlertCircle, Loader2, MapPin, Save } from "lucide-react";
-import { createSucursalAction, updateSucursalAction } from "../actions";
+import { createSucursalAction, listRegimenesFiscalesAction, updateSucursalAction } from "../actions";
 import type { SucursalDetalle } from "../types";
+import { CsdUploader } from "@/features/csd";
+import { SearchableSelect } from "@/components/ui/SearchableSelect";
+import type { CatalogoItem } from "@/lib/cfdi/catalogos";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all placeholder:text-muted focus:border-brand-400 focus:ring-4 focus:ring-brand-400/20";
@@ -33,6 +36,7 @@ function buildClientSchema(esMatriz: boolean) {
         .trim()
         .toUpperCase()
         .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
+      idRegimen: z.string(),
       calle: z.string().trim(),
       colonia: z.string().trim(),
       ciudad: z.string().trim(),
@@ -43,12 +47,17 @@ function buildClientSchema(esMatriz: boolean) {
       telefono: z.string().trim(),
       email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Correo inválido"))]),
     })
-    .refine((data) => !(esMatriz || data.usaFiscalPropio) || (data.razonSocialPropia.trim() && data.rfcPropio.trim()), {
-      message: esMatriz
-        ? "Captura la razón social y el RFC de la empresa"
-        : "Captura razón social y RFC propios, o desactiva \"Razón social propia\"",
-      path: ["razonSocialPropia"],
-    });
+    .refine(
+      (data) =>
+        !(esMatriz || data.usaFiscalPropio) ||
+        (data.razonSocialPropia.trim() && data.rfcPropio.trim() && data.idRegimen && data.codigoPostal.trim()),
+      {
+        message: esMatriz
+          ? "Captura la razón social, el RFC, el régimen fiscal y el código postal de la empresa"
+          : "Captura razón social, RFC, régimen fiscal y código postal propios, o desactiva \"Razón social propia\"",
+        path: ["razonSocialPropia"],
+      },
+    );
 }
 type FormValues = z.infer<ReturnType<typeof buildClientSchema>>;
 
@@ -81,6 +90,7 @@ export function SucursalForm({
       usaFiscalPropio: esMatriz || (initial?.esFiscalPropio ?? false),
       razonSocialPropia: initial?.razonSocialPropia ?? "",
       rfcPropio: initial?.rfcPropio ?? "",
+      idRegimen: initial?.idRegimenPropio ? String(initial.idRegimenPropio) : "",
       calle: initial?.calle ?? "",
       colonia: initial?.colonia ?? "",
       ciudad: initial?.ciudad ?? "",
@@ -90,8 +100,14 @@ export function SucursalForm({
     },
   });
   const usaFiscalPropio = watch("usaFiscalPropio");
+  const idRegimenValue = watch("idRegimen");
   const [activo, setActivo] = useState(initial?.activo ?? true);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [regimenes, setRegimenes] = useState<CatalogoItem[]>([]);
+
+  useEffect(() => {
+    listRegimenesFiscalesAction().then(setRegimenes);
+  }, []);
   const [isPending, startTransition] = useTransition();
 
   const onValid = (values: FormValues) => {
@@ -118,20 +134,40 @@ export function SucursalForm({
             <div>
               <span className={labelClass}>Datos fiscales</span>
               <p className="text-xs text-muted">
-                Razón social y RFC de la empresa. Las sucursales sin datos propios facturan con estos.
+                Razón social, RFC y código postal de la empresa. Las sucursales sin datos propios facturan con
+                estos.
               </p>
             </div>
           </div>
           <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-            <Field label="Razón social" error={errors.razonSocialPropia?.message}>
-              <input className={inputClass} {...register("razonSocialPropia")} />
-            </Field>
+            <div className="sm:col-span-2">
+              <Field label="Razón social" error={errors.razonSocialPropia?.message}>
+                <input className={inputClass} {...register("razonSocialPropia")} />
+              </Field>
+            </div>
             <Field label="RFC" error={errors.rfcPropio?.message}>
               <input
                 className={inputClass}
                 maxLength={13}
                 style={{ textTransform: "uppercase" }}
                 {...register("rfcPropio")}
+              />
+            </Field>
+            <Field label="Régimen fiscal" error={errors.idRegimen?.message}>
+              <SearchableSelect
+                value={idRegimenValue}
+                onChange={(v) => setValue("idRegimen", v, { shouldValidate: true })}
+                searchPlaceholder="Buscar régimen fiscal…"
+                options={regimenes.map((r) => ({ value: String(r.id), label: r.clave, sublabel: r.descripcion ?? undefined }))}
+              />
+            </Field>
+            <Field label="Código postal" error={errors.codigoPostal?.message}>
+              <input
+                className={inputClass}
+                placeholder="86000"
+                inputMode="numeric"
+                maxLength={5}
+                {...register("codigoPostal")}
               />
             </Field>
           </div>
@@ -167,9 +203,11 @@ export function SucursalForm({
 
           {usaFiscalPropio && (
             <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
-              <Field label="Razón social" error={errors.razonSocialPropia?.message}>
-                <input className={inputClass} {...register("razonSocialPropia")} />
-              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Razón social" error={errors.razonSocialPropia?.message}>
+                  <input className={inputClass} {...register("razonSocialPropia")} />
+                </Field>
+              </div>
               <Field label="RFC" error={errors.rfcPropio?.message}>
                 <input
                   className={inputClass}
@@ -178,9 +216,30 @@ export function SucursalForm({
                   {...register("rfcPropio")}
                 />
               </Field>
+              <Field label="Régimen fiscal" error={errors.idRegimen?.message}>
+                <SearchableSelect
+                  value={idRegimenValue}
+                  onChange={(v) => setValue("idRegimen", v, { shouldValidate: true })}
+                  searchPlaceholder="Buscar régimen fiscal…"
+                  options={regimenes.map((r) => ({ value: String(r.id), label: r.clave, sublabel: r.descripcion ?? undefined }))}
+                />
+              </Field>
+              <Field label="Código postal" error={errors.codigoPostal?.message}>
+                <input
+                  className={inputClass}
+                  placeholder="86000"
+                  inputMode="numeric"
+                  maxLength={5}
+                  {...register("codigoPostal")}
+                />
+              </Field>
             </div>
           )}
         </div>
+      )}
+
+      {mode === "edit" && initial && (esMatriz || initial.esFiscalPropio) && initial.rfcEfectivo && (
+        <CsdUploader idEmpresa={initial.id} rfcEmpresa={initial.rfcEfectivo} />
       )}
 
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
@@ -204,15 +263,17 @@ export function SucursalForm({
           <Field label="Ciudad">
             <input className={inputClass} {...register("ciudad")} />
           </Field>
-          <Field label="Código postal" error={errors.codigoPostal?.message}>
-            <input
-              className={inputClass}
-              placeholder="86000"
-              inputMode="numeric"
-              maxLength={5}
-              {...register("codigoPostal")}
-            />
-          </Field>
+          {!esMatriz && !usaFiscalPropio && (
+            <Field label="Código postal" error={errors.codigoPostal?.message}>
+              <input
+                className={inputClass}
+                placeholder="86000"
+                inputMode="numeric"
+                maxLength={5}
+                {...register("codigoPostal")}
+              />
+            </Field>
+          )}
           <Field label="Teléfono">
             <input className={inputClass} {...register("telefono")} />
           </Field>

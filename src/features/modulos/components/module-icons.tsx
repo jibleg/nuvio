@@ -5,6 +5,8 @@ import {
   KeyRound,
   LayoutGrid,
   Package,
+  PlusCircle,
+  Search,
   Shield,
   ShoppingCart,
   SlidersHorizontal,
@@ -27,6 +29,8 @@ const ICONS: Record<string, LucideIcon> = {
   grid: LayoutGrid,
   store: Store,
   handshake: Handshake,
+  search: Search,
+  "plus-circle": PlusCircle,
 };
 
 /** Resuelve una clave de icono a su icono de lucide (módulo plano, server/client). */

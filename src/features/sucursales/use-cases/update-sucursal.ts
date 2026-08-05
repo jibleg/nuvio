@@ -14,15 +14,18 @@ export async function updateSucursalUseCase(
   // que sí aplica a sucursales).
   let rfc: string | null;
   let razonSocial: string | null;
+  let idRegimen: number | null;
   if (actual.esMatriz) {
-    if (!data.razonSocialPropia || !data.rfcPropio) {
-      return { ok: false, error: "Captura la razón social y el RFC de la empresa." };
+    if (!data.razonSocialPropia || !data.rfcPropio || !data.codigoPostal || !data.idRegimen) {
+      return { ok: false, error: "Captura la razón social, el RFC, el régimen fiscal y el código postal de la empresa." };
     }
     rfc = data.rfcPropio;
     razonSocial = data.razonSocialPropia;
+    idRegimen = data.idRegimen;
   } else {
     rfc = data.usaFiscalPropio ? data.rfcPropio : null;
     razonSocial = data.usaFiscalPropio ? data.razonSocialPropia : null;
+    idRegimen = data.usaFiscalPropio ? data.idRegimen : null;
   }
 
   await updateSucursalRepo(id, idCliente, {
@@ -37,6 +40,7 @@ export async function updateSucursalUseCase(
     activo: data.activo,
     rfc,
     razonSocial,
+    idRegimen,
   });
   return { ok: true, id };
 }

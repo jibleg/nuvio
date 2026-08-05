@@ -16,6 +16,16 @@ export type ContactoListItem = {
   telefono: string | null;
   email: string | null;
   activo: boolean;
+  /**
+   * Datos de facturación por defecto (pestaña "Información de facturación"):
+   * prellenan la factura nueva al elegir este cliente, ahí siguen siendo
+   * editables. Se exponen ya en el listado (no solo en el detalle) para que
+   * `@/features/facturacion` los use sin una consulta aparte por cliente.
+   */
+  idRegimen: number | null;
+  idUso: number | null;
+  idFormaPago: number | null;
+  idMetodo: number | null;
 };
 
 export type ContactoDetalle = ContactoListItem & {
@@ -35,6 +45,10 @@ export type ContactoFormData = {
   codigoPostal: number | null;
   telefono: string | null;
   email: string | null;
+  idRegimen: number | null;
+  idUso: number | null;
+  idFormaPago: number | null;
+  idMetodo: number | null;
 };
 
 export type UpdateContactoData = ContactoFormData & { activo: boolean };

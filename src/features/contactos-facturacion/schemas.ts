@@ -35,6 +35,14 @@ const rfcField = z
   .max(13, "Máximo 13 caracteres")
   .regex(/^[A-Z0-9]+$/, "Solo letras y números");
 
+/** Selector opcional que referencia un catálogo CFDI por id (régimen, uso, forma o método de pago). */
+const optionalIdCatalogo = (mensaje: string) =>
+  z
+    .union([z.literal(""), z.string().regex(/^\d+$/, mensaje)])
+    .transform((v) => (v === "" ? null : Number(v)))
+    .nullable()
+    .default(null);
+
 export const contactoFormSchema = z.object({
   tipo: z.enum(["cliente", "proveedor"]),
   razonSocial: z.string().trim().min(1, "Requerido"),
@@ -46,6 +54,10 @@ export const contactoFormSchema = z.object({
   codigoPostal: optionalCodigoPostal,
   telefono: optionalText,
   email: optionalEmail,
+  idRegimen: optionalIdCatalogo("Selecciona un régimen"),
+  idUso: optionalIdCatalogo("Selecciona un uso de CFDI"),
+  idFormaPago: optionalIdCatalogo("Selecciona una forma de pago"),
+  idMetodo: optionalIdCatalogo("Selecciona un método de pago"),
 });
 export type ContactoFormInput = z.input<typeof contactoFormSchema>;
 

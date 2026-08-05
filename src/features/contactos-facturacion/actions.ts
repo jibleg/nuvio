@@ -4,6 +4,14 @@ import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/config/routes";
 import { requirePermission } from "@/features/auth";
 import {
+  listFormasPago,
+  listMetodosPago,
+  listRegimenesFiscales,
+  listUsosCfdi,
+  type CatalogoItem,
+  type MetodoPagoItem,
+} from "@/lib/cfdi/catalogos";
+import {
   contactoFormSchema,
   updateContactoSchema,
   type ContactoFormInput,
@@ -31,9 +39,28 @@ export async function getContactoDetalleAction(id: number): Promise<ContactoDeta
   return getContactoById(id, session.cliente.id);
 }
 
+export type CatalogosContacto = {
+  regimenes: CatalogoItem[];
+  usos: CatalogoItem[];
+  formasPago: CatalogoItem[];
+  metodosPago: MetodoPagoItem[];
+};
+
+/** Catálogos para la pestaña "Información de facturación" del contacto. */
+export async function listCatalogosContactoAction(): Promise<CatalogosContacto> {
+  await requirePermission(VIEW);
+  const [regimenes, usos, formasPago, metodosPago] = await Promise.all([
+    listRegimenesFiscales(),
+    listUsosCfdi(),
+    listFormasPago(),
+    listMetodosPago(),
+  ]);
+  return { regimenes, usos, formasPago, metodosPago };
+}
+
 export async function createContactoAction(
   input: ContactoFormInput,
-): Promise<ContactoActionResult | void> {
+): Promise<ContactoActionResult | { id: number }> {
   const session = await requirePermission(MANAGE);
 
   const parsed = contactoFormSchema.safeParse(input);
@@ -43,6 +70,7 @@ export async function createContactoAction(
   if (!result.ok) return { error: result.error };
 
   revalidatePath(ROUTES.clientesProveedores);
+  return { id: result.id! };
 }
 
 export async function updateContactoAction(

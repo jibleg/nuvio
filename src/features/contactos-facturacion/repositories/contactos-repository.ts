@@ -27,6 +27,10 @@ const listColumns = {
   telefono: contactosFacturacion.telefono,
   email: contactosFacturacion.email,
   activo: contactosFacturacion.activo,
+  idRegimen: contactosFacturacion.idRegimen,
+  idUso: contactosFacturacion.idUso,
+  idFormaPago: contactosFacturacion.idFormaPago,
+  idMetodo: contactosFacturacion.idMetodo,
 };
 
 type ListRow = {
@@ -39,6 +43,10 @@ type ListRow = {
   telefono: string | null;
   email: string | null;
   activo: number;
+  idRegimen: number | null;
+  idUso: number | null;
+  idFormaPago: number | null;
+  idMetodo: number | null;
 };
 
 function toListItem(row: ListRow): ContactoListItem {
@@ -52,6 +60,10 @@ function toListItem(row: ListRow): ContactoListItem {
     telefono: row.telefono,
     email: row.email,
     activo: row.activo !== 0,
+    idRegimen: row.idRegimen,
+    idUso: row.idUso,
+    idFormaPago: row.idFormaPago,
+    idMetodo: row.idMetodo,
   };
 }
 
@@ -102,6 +114,10 @@ export async function createContacto(idCliente: number, form: ContactoFormData):
       codigoPostal: form.codigoPostal,
       telefono: form.telefono,
       email: form.email,
+      idRegimen: form.idRegimen,
+      idUso: form.idUso,
+      idFormaPago: form.idFormaPago,
+      idMetodo: form.idMetodo,
       activo: 1,
     })
     .returning({ id: contactosFacturacion.id });
@@ -126,6 +142,10 @@ export async function updateContacto(
       codigoPostal: data.codigoPostal,
       telefono: data.telefono,
       email: data.email,
+      idRegimen: data.idRegimen,
+      idUso: data.idUso,
+      idFormaPago: data.idFormaPago,
+      idMetodo: data.idMetodo,
       activo: data.activo ? 1 : 0,
     })
     .where(and(eq(contactosFacturacion.id, id), eq(contactosFacturacion.idCliente, idCliente)));

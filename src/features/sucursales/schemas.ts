@@ -37,14 +37,21 @@ const optionalRfc = z
   .nullable()
   .default(null);
 
+const optionalIdRegimen = z
+  .union([z.literal(""), z.string().regex(/^\d+$/, "Selecciona un régimen")])
+  .transform((v) => (v === "" ? null : Number(v)))
+  .nullable()
+  .default(null);
+
 export const sucursalFormSchema = z
   .object({
     nombreComercial: z.string().trim().min(1, "Requerido"),
     nombreCorto: optionalText,
-    /** Si es false, `razonSocialPropia`/`rfcPropio` se descartan y la sucursal hereda de la matriz. */
+    /** Si es false, `razonSocialPropia`/`rfcPropio`/`idRegimen` se descartan y la sucursal hereda de la matriz. */
     usaFiscalPropio: z.boolean().default(false),
     razonSocialPropia: optionalText,
     rfcPropio: optionalRfc,
+    idRegimen: optionalIdRegimen,
     calle: optionalText,
     colonia: optionalText,
     ciudad: optionalText,
@@ -52,10 +59,15 @@ export const sucursalFormSchema = z
     telefono: optionalText,
     email: optionalEmail,
   })
-  .refine((data) => !data.usaFiscalPropio || (data.razonSocialPropia && data.rfcPropio), {
-    message: "Captura razón social y RFC propios, o desactiva \"Razón social propia\"",
-    path: ["razonSocialPropia"],
-  });
+  .refine(
+    (data) =>
+      !data.usaFiscalPropio || (data.razonSocialPropia && data.rfcPropio && data.idRegimen && data.codigoPostal),
+    {
+      message:
+        "Captura razón social, RFC, régimen fiscal y código postal propios, o desactiva \"Razón social propia\"",
+      path: ["razonSocialPropia"],
+    },
+  );
 export type SucursalFormInput = z.input<typeof sucursalFormSchema>;
 
 export const updateSucursalSchema = sucursalFormSchema.and(z.object({ activo: z.boolean() }));

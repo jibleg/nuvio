@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/config/routes";
 import { requirePermission } from "@/features/auth";
+import { listRegimenesFiscales, type CatalogoItem } from "@/lib/cfdi/catalogos";
 import { sucursalFormSchema, updateSucursalSchema, type SucursalFormInput, type UpdateSucursalInput } from "./schemas";
 import { getSucursalById } from "./queries";
 import { createSucursalUseCase } from "./use-cases/create-sucursal";
@@ -19,6 +20,11 @@ export type SucursalActionResult = { error: string };
 export async function getSucursalDetalleAction(id: number): Promise<SucursalDetalle | null> {
   const session = await requirePermission(VIEW);
   return getSucursalById(id, session.cliente.id);
+}
+
+export async function listRegimenesFiscalesAction(): Promise<CatalogoItem[]> {
+  await requirePermission(VIEW);
+  return listRegimenesFiscales();
 }
 
 export async function createSucursalAction(

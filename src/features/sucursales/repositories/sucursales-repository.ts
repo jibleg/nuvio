@@ -91,8 +91,10 @@ export async function getSucursalDetalle(
     .select({
       ...listColumns,
       razonSocial: empresas.razonSocial,
+      idRegimen: empresas.idRegimen,
       matrizRfc: matrizAlias.rfc,
       matrizRazonSocial: matrizAlias.razonSocial,
+      matrizIdRegimen: matrizAlias.idRegimen,
     })
     .from(empresas)
     .leftJoin(matrizAlias, eq(empresas.idEmpresaMatriz, matrizAlias.id))
@@ -103,8 +105,10 @@ export async function getSucursalDetalle(
     ...toListItem(row),
     rfcPropio: row.rfc,
     razonSocialPropia: row.razonSocial,
+    idRegimenPropio: row.idRegimen,
     rfcEfectivo: row.rfc ?? row.matrizRfc,
     razonSocialEfectiva: row.razonSocial ?? row.matrizRazonSocial,
+    idRegimenEfectivo: row.idRegimen ?? row.matrizIdRegimen,
   };
 }
 
@@ -122,6 +126,7 @@ export async function createSucursal(data: {
   idEmpresaMatriz: number;
   rfc: string | null;
   razonSocial: string | null;
+  idRegimen: number | null;
   form: SucursalFormData;
 }): Promise<number> {
   const [{ maxId }] = await db
@@ -144,6 +149,7 @@ export async function createSucursal(data: {
     email: data.form.email,
     rfc: data.rfc,
     razonSocial: data.razonSocial,
+    idRegimen: data.idRegimen,
     activo: 1,
     tipo: 1,
   });
@@ -172,6 +178,7 @@ export async function updateSucursal(
       nombreCorto: data.nombreCorto,
       rfc: data.rfc,
       razonSocial: data.razonSocial,
+      idRegimen: data.idRegimen,
       calle: data.calle,
       colonia: data.colonia,
       ciudad: data.ciudad,

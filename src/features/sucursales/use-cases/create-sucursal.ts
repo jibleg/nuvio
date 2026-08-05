@@ -26,6 +26,7 @@ export async function createSucursalUseCase(
     idEmpresaMatriz: matriz.id,
     rfc: data.usaFiscalPropio ? data.rfcPropio : null,
     razonSocial: data.usaFiscalPropio ? data.razonSocialPropia : null,
+    idRegimen: data.usaFiscalPropio ? data.idRegimen : null,
     form: data,
   });
   return { ok: true, id };

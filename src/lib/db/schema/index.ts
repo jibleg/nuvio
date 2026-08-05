@@ -4,4 +4,5 @@
  * (`@/lib/db/schema`); nunca definen tablas por su cuenta.
  */
 export * from "./administracion";
+export * from "./cfdi";
 export * from "./corporativo";

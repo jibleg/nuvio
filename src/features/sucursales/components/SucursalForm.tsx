@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -16,33 +16,41 @@ const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
  * Schema local para feedback inmediato en el form (strings tal como los
  * produce el DOM). El schema autoritativo con las transformaciones (código
  * postal a número, etc.) vive en `../schemas.ts` y corre en el servidor.
+ *
+ * `esMatriz` cambia solo el mensaje y la obligatoriedad de razón social/RFC:
+ * la matriz siempre los requiere (no hay a quién heredarle), una sucursal
+ * solo cuando activa el toggle "razón social propia".
  */
-const clientSchema = z
-  .object({
-    nombreComercial: z.string().trim().min(1, "Requerido"),
-    nombreCorto: z.string().trim(),
-    usaFiscalPropio: z.boolean(),
-    razonSocialPropia: z.string().trim(),
-    rfcPropio: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
-    calle: z.string().trim(),
-    colonia: z.string().trim(),
-    ciudad: z.string().trim(),
-    codigoPostal: z
-      .string()
-      .trim()
-      .refine((v) => v === "" || /^\d{5}$/.test(v), "5 dígitos"),
-    telefono: z.string().trim(),
-    email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Correo inválido"))]),
-  })
-  .refine((data) => !data.usaFiscalPropio || (data.razonSocialPropia.trim() && data.rfcPropio.trim()), {
-    message: "Captura razón social y RFC propios",
-    path: ["razonSocialPropia"],
-  });
-type FormValues = z.infer<typeof clientSchema>;
+function buildClientSchema(esMatriz: boolean) {
+  return z
+    .object({
+      nombreComercial: z.string().trim().min(1, "Requerido"),
+      nombreCorto: z.string().trim(),
+      usaFiscalPropio: z.boolean(),
+      razonSocialPropia: z.string().trim(),
+      rfcPropio: z
+        .string()
+        .trim()
+        .toUpperCase()
+        .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
+      calle: z.string().trim(),
+      colonia: z.string().trim(),
+      ciudad: z.string().trim(),
+      codigoPostal: z
+        .string()
+        .trim()
+        .refine((v) => v === "" || /^\d{5}$/.test(v), "5 dígitos"),
+      telefono: z.string().trim(),
+      email: z.union([z.literal(""), z.string().trim().toLowerCase().pipe(z.email("Correo inválido"))]),
+    })
+    .refine((data) => !(esMatriz || data.usaFiscalPropio) || (data.razonSocialPropia.trim() && data.rfcPropio.trim()), {
+      message: esMatriz
+        ? "Captura la razón social y el RFC de la empresa"
+        : "Captura razón social y RFC propios, o desactiva \"Razón social propia\"",
+      path: ["razonSocialPropia"],
+    });
+}
+type FormValues = z.infer<ReturnType<typeof buildClientSchema>>;
 
 export function SucursalForm({
   mode,
@@ -55,6 +63,8 @@ export function SucursalForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const esMatriz = initial?.esMatriz ?? false;
+  const clientSchema = useMemo(() => buildClientSchema(esMatriz), [esMatriz]);
   const {
     register,
     handleSubmit,
@@ -66,7 +76,9 @@ export function SucursalForm({
     defaultValues: {
       nombreComercial: initial?.nombreComercial ?? "",
       nombreCorto: initial?.nombreCorto ?? "",
-      usaFiscalPropio: initial?.esFiscalPropio ?? false,
+      // La matriz siempre "usa" sus propios datos fiscales (no hereda de nadie);
+      // en sucursales el toggle real lo decide el usuario.
+      usaFiscalPropio: esMatriz || (initial?.esFiscalPropio ?? false),
       razonSocialPropia: initial?.razonSocialPropia ?? "",
       rfcPropio: initial?.rfcPropio ?? "",
       calle: initial?.calle ?? "",
@@ -99,10 +111,30 @@ export function SucursalForm({
 
   return (
     <form onSubmit={handleSubmit(onValid)} className="space-y-5" noValidate>
-      {initial?.esMatriz ? (
-        <div className="flex items-start gap-2 rounded-xl bg-brand-50 px-3.5 py-2.5 text-xs text-brand-700 dark:bg-brand-500/10 dark:text-brand-300">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          {`Datos fiscales de la matriz: ${initial.razonSocialEfectiva ?? "—"}${initial.rfcEfectivo ? ` · ${initial.rfcEfectivo}` : ""}.`}
+      {esMatriz ? (
+        <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
+          <div className="flex items-start gap-2">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-600" />
+            <div>
+              <span className={labelClass}>Datos fiscales</span>
+              <p className="text-xs text-muted">
+                Razón social y RFC de la empresa. Las sucursales sin datos propios facturan con estos.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+            <Field label="Razón social" error={errors.razonSocialPropia?.message}>
+              <input className={inputClass} {...register("razonSocialPropia")} />
+            </Field>
+            <Field label="RFC" error={errors.rfcPropio?.message}>
+              <input
+                className={inputClass}
+                maxLength={13}
+                style={{ textTransform: "uppercase" }}
+                {...register("rfcPropio")}
+              />
+            </Field>
+          </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
@@ -189,7 +221,7 @@ export function SucursalForm({
           </Field>
         </div>
 
-        {mode === "edit" && !initial?.esMatriz && (
+        {mode === "edit" && !esMatriz && (
           <div className="mt-4">
             <span className={labelClass}>Estado</span>
             <button

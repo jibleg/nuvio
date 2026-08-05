@@ -150,23 +150,28 @@ export async function createSucursal(data: {
   return id;
 }
 
+/**
+ * Escribe los datos ya resueltos por `updateSucursalUseCase`: `rfc`/`razonSocial`
+ * son el valor final a guardar (dato propio o `null` para heredar de la matriz),
+ * no los campos crudos del form. La matriz siempre llega aquí con valores no
+ * nulos porque el use-case los exige antes de llamar a este repositorio.
+ */
 export async function updateSucursal(
   id: number,
   idCliente: number,
-  data: UpdateSucursalData,
+  data: Omit<UpdateSucursalData, "usaFiscalPropio" | "razonSocialPropia" | "rfcPropio"> & {
+    rfc: string | null;
+    razonSocial: string | null;
+  },
 ): Promise<void> {
-  const nuevoRfc = data.usaFiscalPropio ? data.rfcPropio : null;
-  const nuevaRazonSocial = data.usaFiscalPropio ? data.razonSocialPropia : null;
   await db
     .update(empresas)
     .set({
       nombreComercial: data.nombreComercial,
       descripcion: data.nombreComercial,
       nombreCorto: data.nombreCorto,
-      // La matriz nunca "hereda"; sus propios rfc/razón social (fijados en el
-      // onboarding) se dejan intactos pase lo que pase en `usaFiscalPropio`.
-      rfc: sql`case when ${empresas.idEmpresaMatriz} is not null then ${nuevoRfc} else ${empresas.rfc} end`,
-      razonSocial: sql`case when ${empresas.idEmpresaMatriz} is not null then ${nuevaRazonSocial} else ${empresas.razonSocial} end`,
+      rfc: data.rfc,
+      razonSocial: data.razonSocial,
       calle: data.calle,
       colonia: data.colonia,
       ciudad: data.ciudad,

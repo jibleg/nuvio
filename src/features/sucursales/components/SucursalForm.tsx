@@ -8,6 +8,7 @@ import { AlertCircle, Loader2, MapPin, Save } from "lucide-react";
 import { createSucursalAction, listRegimenesFiscalesAction, updateSucursalAction } from "../actions";
 import type { SucursalDetalle } from "../types";
 import { CsdUploader } from "@/features/csd";
+import { LogoUploader } from "./LogoUploader";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import type { CatalogoItem } from "@/lib/cfdi/catalogos";
 
@@ -239,7 +240,10 @@ export function SucursalForm({
       )}
 
       {mode === "edit" && initial && (esMatriz || initial.esFiscalPropio) && initial.rfcEfectivo && (
-        <CsdUploader idEmpresa={initial.id} rfcEmpresa={initial.rfcEfectivo} />
+        <>
+          <LogoUploader idEmpresa={initial.id} />
+          <CsdUploader idEmpresa={initial.id} rfcEmpresa={initial.rfcEfectivo} />
+        </>
       )}
 
       <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, FileText, Loader2, Package, Pencil, Plus, Save, Trash2, UserPlus, Zap } from "lucide-react";
+import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ROUTES } from "@/config/routes";
@@ -29,7 +30,6 @@ const inputClass =
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
 const labelInlineClass = "text-sm font-semibold text-ink-soft";
 const sectionHeader = "flex items-center gap-2";
-const sectionTitle = "font-display text-base font-bold text-ink";
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -173,13 +173,16 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-        <div className={sectionHeader}>
-          <FileText className="h-4 w-4 shrink-0 text-brand-600" />
-          <h2 className={sectionTitle}>Datos de la factura</h2>
-        </div>
-
-        <div className="mt-4 grid gap-4 border-t border-line pt-4 sm:grid-cols-2">
+      <Card
+        title={
+          <span className={sectionHeader}>
+            <FileText className="h-4 w-4 shrink-0 text-brand-600" />
+            Datos de la factura
+          </span>
+        }
+        bodyClassName="p-5"
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <span className={labelClass}>Empresa emisora</span>
             <SearchableSelect
@@ -265,14 +268,16 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
             <input className={inputClass} value={observacion} onChange={(e) => setObservacion(e.target.value)} />
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-        <div className="flex items-center justify-between">
-          <div className={sectionHeader}>
+      <Card
+        title={
+          <span className={sectionHeader}>
             <Package className="h-4 w-4 shrink-0 text-brand-600" />
-            <h2 className={sectionTitle}>Conceptos</h2>
-          </div>
+            Conceptos
+          </span>
+        }
+        action={
           <button
             type="button"
             onClick={abrirNuevoConcepto}
@@ -281,9 +286,10 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
             <Plus className="h-4 w-4" />
             Agregar concepto
           </button>
-        </div>
-
-        <div className="mt-4 border-t border-line pt-4">
+        }
+        bodyClassName="p-5"
+      >
+        <div>
           {conceptos.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-line bg-cloud/30 p-8 text-center text-sm text-muted">
               Aún no agregas ningún concepto.
@@ -359,7 +365,7 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {error && (
         <p className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">

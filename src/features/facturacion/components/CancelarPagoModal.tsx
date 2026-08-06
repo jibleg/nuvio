@@ -6,77 +6,49 @@ import { AlertCircle, AlertTriangle, Ban, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import type { CatalogoItem } from "@/lib/cfdi/catalogos";
 import type { CodigoMotivo } from "@/lib/finkok/cancel-soap";
-import { cancelarFacturaAction, listMotivosCancelacionAction } from "../actions";
+import { cancelarPagoAction, listMotivosCancelacionAction } from "../actions";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-all placeholder:text-muted focus:border-brand-400 focus:ring-4 focus:ring-brand-400/20";
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
 
-export function CancelarFacturaModal({
-  open,
-  idFactura,
-  onClose,
-  motivoInicial = "02",
-  folioSustitucionInicial = "",
-}: {
-  open: boolean;
-  idFactura: number;
-  onClose: () => void;
-  /** Prellenado cuando se abre desde el CTA "Cancelar la original ahora" — ya se resolvió el folio del sustituto timbrado. */
-  motivoInicial?: CodigoMotivo;
-  folioSustitucionInicial?: string;
-}) {
+export function CancelarPagoModal({ open, idPago, onClose }: { open: boolean; idPago: number; onClose: () => void }) {
   const router = useRouter();
   const [motivos, setMotivos] = useState<CatalogoItem[]>([]);
-  const [motivo, setMotivo] = useState<CodigoMotivo>(motivoInicial);
-  const [folioSustitucion, setFolioSustitucion] = useState(folioSustitucionInicial);
+  const [motivo, setMotivo] = useState<CodigoMotivo>("02");
   const [error, setError] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (open) {
-      listMotivosCancelacionAction().then(setMotivos);
+      // Un complemento de pago no tiene sustitución: se excluye el motivo "01".
+      listMotivosCancelacionAction().then((lista) => setMotivos(lista.filter((m) => m.clave !== "01")));
       setError(null);
       setMensaje(null);
-      setMotivo(motivoInicial);
-      setFolioSustitucion(folioSustitucionInicial);
+      setMotivo("02");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   return (
-    <Modal open={open} onClose={onClose} title="Cancelar factura" description="Solicitud de cancelación ante el SAT" size="md">
+    <Modal open={open} onClose={onClose} title="Cancelar complemento de pago" description="Solicitud de cancelación ante el SAT" size="md">
       <div className="space-y-4">
         <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-3">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
           <p className="text-sm text-ink">
-            Esto envía la solicitud de cancelación al PAC. Según el motivo, el receptor puede tener que aceptarla.
+            Al cancelarse, el saldo de las facturas que este pago liquidaba vuelve a aparecer como pendiente de cobro.
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <span className={labelClass}>Motivo</span>
-            <select className={inputClass} value={motivo} onChange={(e) => setMotivo(e.target.value as CodigoMotivo)}>
-              {motivos.map((m) => (
-                <option key={m.id} value={m.clave}>
-                  {m.clave} — {m.descripcion ?? m.clave}
-                </option>
-              ))}
-            </select>
-          </div>
-          {motivo === "01" && (
-            <div>
-              <span className={labelClass}>Folio fiscal que la sustituye</span>
-              <input
-                className={inputClass}
-                value={folioSustitucion}
-                onChange={(e) => setFolioSustitucion(e.target.value)}
-                placeholder="UUID de la factura nueva"
-              />
-            </div>
-          )}
+        <div>
+          <span className={labelClass}>Motivo</span>
+          <select className={inputClass} value={motivo} onChange={(e) => setMotivo(e.target.value as CodigoMotivo)}>
+            {motivos.map((m) => (
+              <option key={m.id} value={m.clave}>
+                {m.clave} — {m.descripcion ?? m.clave}
+              </option>
+            ))}
+          </select>
         </div>
 
         {error && (
@@ -85,9 +57,7 @@ export function CancelarFacturaModal({
             {error}
           </p>
         )}
-        {mensaje && (
-          <p className="rounded-xl border border-line bg-cloud/40 px-3.5 py-2.5 text-sm font-medium text-ink">{mensaje}</p>
-        )}
+        {mensaje && <p className="rounded-xl border border-line bg-cloud/40 px-3.5 py-2.5 text-sm font-medium text-ink">{mensaje}</p>}
 
         <div className="flex items-center gap-3 border-t border-line pt-4">
           <button
@@ -97,7 +67,7 @@ export function CancelarFacturaModal({
               setError(null);
               setMensaje(null);
               startTransition(async () => {
-                const result = await cancelarFacturaAction(idFactura, motivo, motivo === "01" ? folioSustitucion : null);
+                const result = await cancelarPagoAction(idPago, motivo);
                 if (!result.ok) {
                   setError(result.error);
                   return;

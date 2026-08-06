@@ -54,7 +54,14 @@ export type FacturaDetalle = FacturaListItem & {
   idMoneda: number;
   observacion: string | null;
   conceptos: (ConceptoInput & { importe: number })[];
+  /** UUID del CFDI al que este comprobante sustituye (refacturación), si aplica. */
+  cfdiRelacionado: string | null;
+  /** `"04"` = sustitución de los CFDI previos — el único tipo de relación que emite Nuvio. */
+  tipoRelacion: string | null;
 };
+
+/** Referencia liviana a otra factura del mismo cliente — usada para enlazar original ↔ sustituto en refacturación. */
+export type FacturaResumenRelacion = { id: number; folioFiscal: string };
 
 export type CrearBorradorData = {
   idEmpresaEmisora: number;
@@ -65,6 +72,9 @@ export type CrearBorradorData = {
   idMoneda: number;
   observacion: string | null;
   conceptos: ConceptoInput[];
+  /** Presentes solo al refacturar (ver `use-cases/refacturar.ts`). */
+  cfdiRelacionado?: string | null;
+  tipoRelacion?: string | null;
 };
 
 export type FacturaMutationResult = { ok: true; id: number } | { ok: false; error: string };
@@ -74,3 +84,101 @@ export type TimbrarResult =
   | { ok: false; error: string; puedeReintentar: boolean };
 
 export type CancelarResult = { ok: true; mensaje: string } | { ok: false; error: string };
+
+/**
+ * Complementos de pago (CFDI 4.0 tipo "P"): un pago recibido que liquida, total
+ * o parcialmente, una o más facturas de ingreso a crédito (método PPD). El
+ * comprobante en sí es otra fila de `cfdi.factura` (`idTipoComprobante = 5`,
+ * ver `TIPO_COMPROBANTE_PAGO`); `cfdi.pago`/`cfdi.documento_relacionado` (tablas
+ * heredadas, sin usar hasta ahora) guardan lo propio del pago.
+ */
+
+/** `cfdi.tipo_comprobante` — el complemento de pago es su propio tipo. */
+export const TIPO_COMPROBANTE_PAGO = 5;
+/** `cfdi.uso` — CP01 "Pagos", uso de CFDI obligatorio en el receptor de un pago. */
+export const CVE_USO_CP01 = 24;
+/** `cfdi.metodo_pago` — único método que exige complemento de pago (crédito). */
+export const CVE_METODO_PPD = 2;
+
+/** Una factura de ingreso PPD con saldo pendiente, candidata a recibir un pago. */
+export type FacturaPorPagar = {
+  id: number;
+  serie: string | null;
+  folio: number | null;
+  folioFiscal: string;
+  emisorNombre: string | null;
+  idEmpresaEmisora: number;
+  receptorNombre: string | null;
+  receptorRfc: string | null;
+  idContactoFacturacion: number;
+  fechaTimbrado: string | null;
+  /** Total con IVA del CFDI de ingreso. */
+  total: number;
+  /** Suma de lo ya pagado por complementos previos (borrador o timbrados) vivos. */
+  pagado: number;
+  /** `total - pagado`. */
+  saldo: number;
+  /** Parcialidad que le tocaría al próximo pago. */
+  siguienteParcialidad: number;
+};
+
+/** Datos del pago recibido, capturados por el operador. */
+export type DatosPago = {
+  idFormaPago: number;
+  /** `AAAA-MM-DD`; la hora se fija a mediodía local. */
+  fechaPago: string;
+  numeroOperacion: string;
+  cuentaOrdenante: string | null;
+  cuentaBeneficiario: string | null;
+};
+
+/** Una factura de ingreso que este pago liquida (total o parcialmente). */
+export type DocumentoAPagar = {
+  idFactura: number;
+  /** Lo que se abona a ESTA factura con este pago. */
+  importePagado: number;
+};
+
+export type CrearBorradorPagoResult = { ok: true; id: number } | { ok: false; error: string };
+
+export type PagoListItem = {
+  id: number;
+  estado: EstadoFactura;
+  estatusCancelacion: string | null;
+  serie: string | null;
+  folio: number | null;
+  folioFiscal: string | null;
+  emisorNombre: string | null;
+  emisorRfc: string | null;
+  receptorNombre: string | null;
+  receptorRfc: string | null;
+  fechaPago: string | null;
+  monto: string | null;
+  documentos: number;
+  fechaTimbrado: string | null;
+};
+
+export type PagoDocumentoDetalle = {
+  folioFiscal: string | null;
+  serieFolio: string;
+  parcialidad: string | null;
+  impSaldoAnt: number;
+  impPagado: number;
+  impSaldoInsoluto: number;
+};
+
+/** Un pago (ya timbrado) aplicado a una factura de ingreso — para mostrar su historial en el detalle de la factura. */
+export type PagoAplicado = {
+  idPago: number;
+  folioFiscal: string | null;
+  fechaPago: string | null;
+  impPagado: number;
+};
+
+export type PagoDetalle = PagoListItem & {
+  idEmpresaEmisora: number;
+  idContactoFacturacion: number;
+  idFormaPago: number | null;
+  numeroOperacion: string | null;
+  documentosDetalle: PagoDocumentoDetalle[];
+};

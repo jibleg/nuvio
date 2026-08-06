@@ -204,3 +204,42 @@ export async function setActivo(id: number, idCliente: number, activo: boolean):
       ),
     );
 }
+
+/** Metadatos del logo (sin el binario) — para la UI de subida, no para servirlo. */
+export async function getLogoMeta(
+  id: number,
+  idCliente: number,
+): Promise<{ tieneLogo: boolean; nombre: string | null } | null> {
+  const [row] = await db
+    .select({ logoMime: empresas.logoMime, logoNombre: empresas.logoNombre })
+    .from(empresas)
+    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente), esEmpresaPropia))
+    .limit(1);
+  if (!row) return null;
+  return { tieneLogo: row.logoMime !== null, nombre: row.logoNombre };
+}
+
+/** Binario + mime del logo, para servirlo por HTTP (preview y hero del PDF). */
+export async function getLogoBytes(
+  id: number,
+  idCliente: number,
+): Promise<{ data: Buffer; mimeType: string } | null> {
+  const [row] = await db
+    .select({ logo: empresas.logo, logoMime: empresas.logoMime })
+    .from(empresas)
+    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente), esEmpresaPropia))
+    .limit(1);
+  if (!row?.logo || !row.logoMime) return null;
+  return { data: row.logo, mimeType: row.logoMime };
+}
+
+export async function setLogo(
+  id: number,
+  idCliente: number,
+  logo: { data: Buffer; mimeType: string; nombre: string },
+): Promise<void> {
+  await db
+    .update(empresas)
+    .set({ logo: logo.data, logoMime: logo.mimeType, logoNombre: logo.nombre })
+    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente), esEmpresaPropia));
+}

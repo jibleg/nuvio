@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View, Image } from "@react-pdf/renderer";
 import type { DatosTimbre } from "@/lib/cfdi/tfd";
-import type { FacturaDetalle } from "../types";
+import type { PagoDetalle } from "../types";
 
 const BRAND_700 = "#15808d";
 const AURORA_500 = "#58ced5";
@@ -50,13 +50,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: LINE,
   },
-  colDescripcion: { flex: 3 },
-  colCantidad: { flex: 1, textAlign: "right" },
-  colPrecio: { flex: 1, textAlign: "right" },
-  colImporte: { flex: 1, textAlign: "right" },
+  colFolio: { flex: 3 },
+  colParcialidad: { flex: 1, textAlign: "center" },
+  colImporte: { flex: 1.2, textAlign: "right" },
   totales: { marginTop: 10, alignItems: "flex-end" },
-  totalLinea: { flexDirection: "row", gap: 16, marginBottom: 2 },
-  totalEtiqueta: { color: MUTED },
   totalFinal: { fontSize: 11, fontWeight: 700, marginTop: 4, color: BRAND_700 },
   pie: { marginTop: 20, flexDirection: "row", gap: 12, alignItems: "flex-start" },
   qr: { width: 70, height: 70 },
@@ -74,22 +71,17 @@ const styles = StyleSheet.create({
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
-export function FacturaPdfDocument({
-  factura,
+export function PagoPdfDocument({
+  pago,
   timbre,
   qrDataUrl,
   logoDataUrl,
 }: {
-  factura: FacturaDetalle;
+  pago: PagoDetalle;
   timbre: DatosTimbre;
   qrDataUrl: string | null;
   logoDataUrl?: string | null;
 }) {
-  const subtotal = factura.conceptos.reduce((acc, c) => acc + c.importe, 0);
-  const gravado = factura.conceptos.filter((c) => c.gravado).reduce((acc, c) => acc + c.importe, 0);
-  const exento = subtotal - gravado;
-  const iva = Math.round(gravado * 0.16 * 100) / 100;
-
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
@@ -97,17 +89,17 @@ export function FacturaPdfDocument({
           <View style={styles.heroEmisor}>
             {logoDataUrl && <Image style={styles.heroLogo} src={logoDataUrl} />}
             <View>
-              <Text style={styles.heroEmisorNombre}>{factura.emisorNombre ?? "—"}</Text>
-              <Text style={styles.heroEmisorRfc}>{factura.emisorRfc ?? "—"}</Text>
+              <Text style={styles.heroEmisorNombre}>{pago.emisorNombre ?? "—"}</Text>
+              <Text style={styles.heroEmisorRfc}>{pago.emisorRfc ?? "—"}</Text>
             </View>
           </View>
           <View style={styles.heroDerecha}>
-            <Text style={styles.heroTitulo}>FACTURA · CFDI 4.0</Text>
-            <Text style={styles.heroFolio}>{factura.folioFiscal}</Text>
+            <Text style={styles.heroTitulo}>COMPLEMENTO DE PAGO · CFDI 4.0</Text>
+            <Text style={styles.heroFolio}>{pago.folioFiscal}</Text>
             <Text style={styles.heroSerieFolio}>
-              Serie {factura.serie ?? "—"} · Folio {factura.folio ?? "—"}
+              Serie {pago.serie ?? "—"} · Folio {pago.folio ?? "—"}
             </Text>
-            <Text style={styles.heroSerieFolio}>{factura.fechaTimbrado ?? ""}</Text>
+            <Text style={styles.heroSerieFolio}>{pago.fechaTimbrado ?? ""}</Text>
           </View>
         </View>
         <View style={styles.heroAcento} />
@@ -116,61 +108,48 @@ export function FacturaPdfDocument({
           <View style={styles.filaBloques}>
             <View style={[styles.bloque, styles.bloqueMitad]}>
               <Text style={styles.etiqueta}>Receptor</Text>
-              <Text style={styles.valor}>{factura.receptorNombre}</Text>
-              <Text style={styles.valor}>{factura.receptorRfc}</Text>
+              <Text style={styles.valor}>{pago.receptorNombre}</Text>
+              <Text style={styles.valor}>{pago.receptorRfc}</Text>
             </View>
             <View style={[styles.bloque, styles.bloqueMitad]}>
-              <Text style={styles.etiqueta}>Comprobante</Text>
-              <Text style={styles.valor}>Moneda: {"MXN"}</Text>
+              <Text style={styles.etiqueta}>Datos del pago</Text>
+              <Text style={styles.valor}>Fecha: {pago.fechaPago ?? "—"}</Text>
+              <Text style={styles.valor}>Referencia: {pago.numeroOperacion || "—"}</Text>
             </View>
           </View>
 
           <View style={styles.tablaHeader}>
-            <Text style={styles.colDescripcion}>Descripción</Text>
-            <Text style={styles.colCantidad}>Cant.</Text>
-            <Text style={styles.colPrecio}>P. unitario</Text>
-            <Text style={styles.colImporte}>Importe</Text>
+            <Text style={styles.colFolio}>Folio fiscal del CFDI pagado</Text>
+            <Text style={styles.colParcialidad}>Parc.</Text>
+            <Text style={styles.colImporte}>Saldo ant.</Text>
+            <Text style={styles.colImporte}>Pagado</Text>
+            <Text style={styles.colImporte}>Insoluto</Text>
           </View>
-          {factura.conceptos.map((c, i) => (
+          {pago.documentosDetalle.map((d, i) => (
             <View key={i} style={styles.tablaFila}>
-              <View style={styles.colDescripcion}>
-                <Text>{c.descripcion}</Text>
-                <Text style={{ fontSize: 6, color: MUTED }}>
-                  {c.claveProdServ} · {c.claveUnidad}
-                </Text>
+              <View style={styles.colFolio}>
+                <Text style={{ fontSize: 7 }}>{d.folioFiscal ?? "—"}</Text>
+                <Text style={{ fontSize: 6, color: MUTED }}>{d.serieFolio}</Text>
               </View>
-              <Text style={styles.colCantidad}>{c.cantidad}</Text>
-              <Text style={styles.colPrecio}>{formatoMoneda.format(c.valorUnitario)}</Text>
-              <Text style={styles.colImporte}>{formatoMoneda.format(c.importe)}</Text>
+              <Text style={styles.colParcialidad}>{d.parcialidad ?? "1"}</Text>
+              <Text style={styles.colImporte}>{formatoMoneda.format(d.impSaldoAnt)}</Text>
+              <Text style={styles.colImporte}>{formatoMoneda.format(d.impPagado)}</Text>
+              <Text style={styles.colImporte}>{formatoMoneda.format(d.impSaldoInsoluto)}</Text>
             </View>
           ))}
 
           <View style={styles.totales}>
-            <View style={styles.totalLinea}>
-              <Text style={styles.totalEtiqueta}>Subtotal</Text>
-              <Text>{formatoMoneda.format(subtotal)}</Text>
-            </View>
-            {exento > 0 && (
-              <View style={styles.totalLinea}>
-                <Text style={styles.totalEtiqueta}>Importe exento</Text>
-                <Text>{formatoMoneda.format(exento)}</Text>
-              </View>
-            )}
-            <View style={styles.totalLinea}>
-              <Text style={styles.totalEtiqueta}>IVA 16%</Text>
-              <Text>{formatoMoneda.format(iva)}</Text>
-            </View>
-            <Text style={styles.totalFinal}>Total {formatoMoneda.format(subtotal + iva)}</Text>
+            <Text style={styles.totalFinal}>Total pagado {formatoMoneda.format(pago.monto ? Number(pago.monto) : 0)}</Text>
           </View>
 
           <View style={styles.pie}>
             {qrDataUrl && <Image style={styles.qr} src={qrDataUrl} />}
             <Text style={styles.selloTexto}>
-              UUID: {factura.folioFiscal}
+              UUID: {pago.folioFiscal}
               {"\n"}Sello CFDI: {timbre.selloCfdi ?? "—"}
               {"\n"}Sello SAT: {timbre.selloSat ?? "—"}
               {"\n"}No. Certificado SAT: {timbre.noCertificadoSat ?? "—"}
-              {"\n"}Este documento es una representación impresa de un CFDI.
+              {"\n"}Este documento es una representación impresa de un CFDI de tipo Pago (complemento Pagos 2.0).
             </Text>
           </View>
 

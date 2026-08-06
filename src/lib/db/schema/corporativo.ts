@@ -60,6 +60,10 @@ export const empresas = corporativo.table("empresas", {
   signValidoHasta: timestamp("sign_valido_hasta", { withTimezone: true }),
   /** Serie del CFDI (opcional, prefijo de folio a nivel de empresa). */
   serie: varchar("serie", { length: 5 }),
+  /** Logo del emisor para el hero de la representación impresa (PDF). Columna heredada de factura-facil, sin usar hasta ahora. */
+  logo: bytea("logo"),
+  logoMime: varchar("logo_mime", { length: 50 }),
+  logoNombre: varchar("logo_nombre", { length: 120 }),
 });
 
 /** Folio consecutivo por empresa (contador transaccional, ver `empresa-folios-repository.ts`). */

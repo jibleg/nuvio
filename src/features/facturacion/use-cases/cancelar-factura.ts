@@ -6,7 +6,7 @@ import { cancelarConFinkok, consultarEstatusSat } from "@/lib/finkok/cancel";
 import type { CodigoMotivo, EstatusSat } from "@/lib/finkok/cancel-soap";
 import { credencialesFinkok, type AmbienteTimbrado } from "@/lib/finkok/credenciales";
 import { getEmisorDetalle } from "../repositories/emisor-repository";
-import { getFacturaDetalle, marcarCancelacion } from "../repositories/facturas-repository";
+import { existeFacturaTimbradaConFolioFiscal, getFacturaDetalle, marcarCancelacion } from "../repositories/facturas-repository";
 import type { CancelarResult } from "../types";
 
 /** `cfdi.motivo_cancelacion` — estables, no cambian. */
@@ -55,8 +55,21 @@ export async function cancelarFacturaUseCase(
     return { ok: false, error: "Solo se puede cancelar una factura timbrada y vigente." };
   }
   if (!facturaDetalle.folioFiscal) return { ok: false, error: "Esta factura no tiene folio fiscal." };
-  if (motivo === "01" && !folioSustitucion) {
-    return { ok: false, error: "El motivo 01 requiere el folio fiscal que sustituye a esta factura." };
+  if (motivo === "01") {
+    if (!folioSustitucion) {
+      return { ok: false, error: "El motivo 01 requiere el folio fiscal que sustituye a esta factura." };
+    }
+    // El sustituto debe existir y estar YA TIMBRADO antes de cancelar: es el
+    // orden que exige el SAT (timbrar el sustituto, luego cancelar el
+    // original con su folio) y evita capturar a mano un UUID inventado.
+    const existeSustituto = await existeFacturaTimbradaConFolioFiscal(folioSustitucion, idCliente);
+    if (!existeSustituto) {
+      return {
+        ok: false,
+        error:
+          "El folio fiscal de sustitución no corresponde a ninguna factura ya timbrada en Nuvio. Timbra primero el CFDI que sustituye a esta factura y usa su folio fiscal.",
+      };
+    }
   }
 
   const emisor = await getEmisorDetalle(facturaDetalle.idEmpresaEmisora, idCliente);

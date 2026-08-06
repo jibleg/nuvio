@@ -20,19 +20,40 @@ import type { CodigoMotivo } from "@/lib/finkok/cancel-soap";
 import type { EnviarCorreoResult } from "@/lib/email/sparkpost";
 import { borradorFormSchema, type BorradorFormInput } from "./schemas";
 import { eliminarBorrador, getEmailReceptorActual } from "./repositories/facturas-repository";
-import { getEmisoresList, getFacturaById } from "./queries";
+import { eliminarBorradorPago } from "./repositories/pagos-repository";
+import { getEmisoresList, getFacturaById, getFacturasPorPagar, getPagoById, getPagosList, getSaldoPendienteFactura } from "./queries";
 import { actualizarBorradorUseCase } from "./use-cases/actualizar-borrador";
 import { cancelarFacturaUseCase } from "./use-cases/cancelar-factura";
+import { cancelarPagoUseCase } from "./use-cases/cancelar-pago";
 import { crearBorradorUseCase } from "./use-cases/crear-borrador";
+import { crearBorradorPagoUseCase } from "./use-cases/crear-borrador-pago";
 import { enviarFacturaCorreoUseCase } from "./use-cases/enviar-factura-correo";
+import { refacturarUseCase } from "./use-cases/refacturar";
 import { timbrarFacturaUseCase } from "./use-cases/timbrar-factura";
+import { timbrarPagoUseCase } from "./use-cases/timbrar-pago";
 import type { EmisorListItem } from "./repositories/emisor-repository";
-import type { CancelarResult, FacturaDetalle } from "./types";
+import type {
+  CancelarResult,
+  CrearBorradorPagoResult,
+  DatosPago,
+  DocumentoAPagar,
+  FacturaDetalle,
+  FacturaMutationResult,
+  FacturaPorPagar,
+  PagoDetalle,
+  PagoListItem,
+} from "./types";
 
 const VIEW = "facturas.consulta";
 const MANAGE = "facturas.write";
 
 export type FacturaActionResult = { error: string };
+
+/** El home del módulo (dashboard) y el listado viven en rutas distintas; una mutación de factura afecta a ambas. */
+function revalidarFacturacion(): void {
+  revalidatePath(ROUTES.facturacion);
+  revalidatePath(`${ROUTES.facturacion}/consultar`);
+}
 
 export async function getFacturaDetalleAction(id: number): Promise<FacturaDetalle | null> {
   const session = await requirePermission(VIEW);
@@ -87,7 +108,7 @@ export async function crearBorradorAction(input: BorradorFormInput): Promise<Fac
   const result = await crearBorradorUseCase(session.cliente.id, session.usuario.id, parsed.data);
   if (!result.ok) return { error: result.error };
 
-  revalidatePath(ROUTES.facturacion);
+  revalidarFacturacion();
   return { error: "", id: result.id };
 }
 
@@ -103,13 +124,13 @@ export async function actualizarBorradorAction(
   const result = await actualizarBorradorUseCase(id, session.cliente.id, parsed.data);
   if (!result.ok) return { error: result.error };
 
-  revalidatePath(ROUTES.facturacion);
+  revalidarFacturacion();
 }
 
 export async function eliminarBorradorAction(id: number): Promise<FacturaActionResult | void> {
   const session = await requirePermission(MANAGE);
   await eliminarBorrador(id, session.cliente.id);
-  revalidatePath(ROUTES.facturacion);
+  revalidarFacturacion();
 }
 
 export async function timbrarFacturaAction(id: number): Promise<FacturaActionResult | void> {
@@ -118,7 +139,7 @@ export async function timbrarFacturaAction(id: number): Promise<FacturaActionRes
   const result = await timbrarFacturaUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado);
   if (!result.ok) return { error: result.error };
 
-  revalidatePath(ROUTES.facturacion);
+  revalidarFacturacion();
 }
 
 export async function listMotivosCancelacionAction(): Promise<CatalogoItem[]> {
@@ -134,7 +155,7 @@ export async function cancelarFacturaAction(
   const session = await requirePermission(MANAGE);
 
   const result = await cancelarFacturaUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado, motivo, folioSustitucion);
-  if (result.ok) revalidatePath(ROUTES.facturacion);
+  if (result.ok) revalidarFacturacion();
   return result;
 }
 
@@ -147,4 +168,71 @@ export async function getEmailReceptorAction(idFactura: number): Promise<string 
 export async function enviarFacturaCorreoAction(id: number, correo: string): Promise<EnviarCorreoResult> {
   const session = await requirePermission(MANAGE);
   return enviarFacturaCorreoUseCase(id, session.cliente.id, correo);
+}
+
+export async function getSaldoPendienteAction(idFactura: number): Promise<number | null> {
+  const session = await requirePermission(VIEW);
+  return getSaldoPendienteFactura(idFactura, session.cliente.id);
+}
+
+export async function refacturarAction(idFacturaOriginal: number): Promise<FacturaMutationResult> {
+  const session = await requirePermission(MANAGE);
+  const result = await refacturarUseCase(idFacturaOriginal, session.cliente.id, session.usuario.id);
+  if (result.ok) revalidarFacturacion();
+  return result;
+}
+
+// ---- Complementos de pago ----
+
+export async function listPagosAction(): Promise<PagoListItem[]> {
+  const session = await requirePermission(VIEW);
+  return getPagosList(session.cliente.id);
+}
+
+export async function getPagoDetalleAction(id: number): Promise<PagoDetalle | null> {
+  const session = await requirePermission(VIEW);
+  return getPagoById(id, session.cliente.id);
+}
+
+export async function listFacturasPorPagarAction(idContactoFacturacion?: number): Promise<FacturaPorPagar[]> {
+  const session = await requirePermission(VIEW);
+  return getFacturasPorPagar(session.cliente.id, idContactoFacturacion);
+}
+
+export async function crearBorradorPagoAction(
+  documentos: DocumentoAPagar[],
+  datosPago: DatosPago,
+): Promise<CrearBorradorPagoResult> {
+  const session = await requirePermission(MANAGE);
+  const result = await crearBorradorPagoUseCase(session.usuario.id, session.cliente.id, documentos, datosPago);
+  if (result.ok) {
+    revalidatePath(`${ROUTES.facturacion}/pagos`);
+    revalidarFacturacion();
+  }
+  return result;
+}
+
+export async function eliminarBorradorPagoAction(id: number): Promise<void> {
+  const session = await requirePermission(MANAGE);
+  await eliminarBorradorPago(id, session.cliente.id);
+  revalidatePath(`${ROUTES.facturacion}/pagos`);
+  revalidarFacturacion();
+}
+
+export async function timbrarPagoAction(id: number): Promise<FacturaActionResult | void> {
+  const session = await requirePermission(MANAGE);
+  const result = await timbrarPagoUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado);
+  if (!result.ok) return { error: result.error };
+  revalidatePath(`${ROUTES.facturacion}/pagos`);
+  revalidarFacturacion();
+}
+
+export async function cancelarPagoAction(id: number, motivo: CodigoMotivo): Promise<CancelarResult> {
+  const session = await requirePermission(MANAGE);
+  const result = await cancelarPagoUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado, motivo);
+  if (result.ok) {
+    revalidatePath(`${ROUTES.facturacion}/pagos`);
+    revalidarFacturacion();
+  }
+  return result;
 }

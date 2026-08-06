@@ -138,6 +138,10 @@ export async function timbrarFacturaUseCase(
       moneda: claveMoneda,
       tipoDeComprobante: "I",
       lugarExpedicion: String(cpEmisor),
+      cfdiRelacionados:
+        facturaDetalle.cfdiRelacionado && facturaDetalle.tipoRelacion
+          ? { tipoRelacion: facturaDetalle.tipoRelacion, uuids: [facturaDetalle.cfdiRelacionado] }
+          : null,
       emisor: { rfc: emisor.rfc, nombre: emisor.razonSocial, regimenFiscal: claveRegimenEmisor },
       receptor: {
         rfc: receptor.rfc,

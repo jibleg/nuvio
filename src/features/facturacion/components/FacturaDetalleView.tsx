@@ -1,12 +1,28 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, AlertTriangle, Ban, CheckCircle2, Download, FileCode2, FileText, Loader2, Mail, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Ban,
+  Banknote,
+  CheckCircle2,
+  Download,
+  FileCode2,
+  FileText,
+  Loader2,
+  Mail,
+  Repeat,
+  Trash2,
+} from "lucide-react";
+import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ROUTES } from "@/config/routes";
-import { eliminarBorradorAction } from "../actions";
-import type { FacturaDetalle } from "../types";
+import { eliminarBorradorAction, refacturarAction } from "../actions";
+import type { FacturaDetalle, FacturaResumenRelacion, PagoAplicado } from "../types";
 import { CancelarFacturaModal } from "./CancelarFacturaModal";
 import { EnviarCorreoModal } from "./EnviarCorreoModal";
 import { FacturaForm } from "./FacturaForm";
@@ -19,20 +35,66 @@ const AVISO_CANCELACION: Record<string, string> = {
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
+function BannerSustituye({ facturaOriginal }: { facturaOriginal: FacturaResumenRelacion }) {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl border border-brand-200 bg-brand-50/60 px-3.5 py-3 dark:border-brand-800 dark:bg-brand-900/20">
+      <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" />
+      <p className="text-sm text-ink">
+        Sustituye al folio fiscal{" "}
+        <Link href={`${ROUTES.facturacion}/${facturaOriginal.id}`} className="font-mono font-medium text-brand-700 hover:underline dark:text-brand-300">
+          {facturaOriginal.folioFiscal}
+        </Link>
+        .
+      </p>
+    </div>
+  );
+}
+
 export function FacturaDetalleView({
   factura,
   puedeGestionar,
+  saldoPendiente = null,
+  pagosAplicados = [],
+  facturaOriginal = null,
+  sustitutoTimbrado = null,
 }: {
   factura: FacturaDetalle;
   puedeGestionar: boolean;
+  /** `null` si la factura no es PPD o no está timbrada; un número (0 incluido) si aplica. */
+  saldoPendiente?: number | null;
+  pagosAplicados?: PagoAplicado[];
+  /** La factura a la que esta sustituye, si `factura.cfdiRelacionado` está resuelto. */
+  facturaOriginal?: FacturaResumenRelacion | null;
+  /** El sustituto YA TIMBRADO de esta factura, si ya se refacturó y timbró (habilita cancelar con motivo 01). */
+  sustitutoTimbrado?: FacturaResumenRelacion | null;
 }) {
+  const router = useRouter();
   const [eliminando, setEliminando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
+  const [refacturando, setRefacturando] = useState(false);
+  const [errorRefacturar, setErrorRefacturar] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const refacturar = () => {
+    setErrorRefacturar(null);
+    setRefacturando(true);
+    startTransition(async () => {
+      const result = await refacturarAction(factura.id);
+      setRefacturando(false);
+      if (!result.ok) {
+        setErrorRefacturar(result.error);
+        return;
+      }
+      router.push(`${ROUTES.facturacion}/${result.id}`);
+      router.refresh();
+    });
+  };
 
   if (factura.estado === "borrador") {
     return (
       <div className="space-y-5">
+        {facturaOriginal && <BannerSustituye facturaOriginal={facturaOriginal} />}
         <FacturaForm mode="edit" initial={factura} />
         {puedeGestionar && (
           <div className="flex justify-end">
@@ -53,7 +115,7 @@ export function FacturaDetalleView({
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-line bg-surface p-6 shadow-soft">
+      <Card bodyClassName="p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3">
             <span
@@ -67,14 +129,13 @@ export function FacturaDetalleView({
               <p className="break-all font-mono text-sm font-medium text-ink">{factura.folioFiscal ?? "—"}</p>
             </div>
           </div>
-          <span
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              factura.estado === "cancelada" ? "bg-red-500/10 text-red-500" : "bg-brand-50 text-brand-700 dark:text-brand-200"
-            }`}
+          <StatusBadge
+            tone={factura.estado === "cancelada" ? "danger" : "brand"}
+            icon={factura.estado === "cancelada" ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            className="px-3 py-1"
           >
-            {factura.estado === "cancelada" ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
             {factura.estado === "cancelada" ? "Cancelada" : "Timbrada"}
-          </span>
+          </StatusBadge>
         </div>
 
         <div className="mt-5 grid gap-4 border-t border-line pt-4 text-sm sm:grid-cols-2">
@@ -109,6 +170,28 @@ export function FacturaDetalleView({
           </div>
         )}
 
+        {facturaOriginal && <div className="mt-4"><BannerSustituye facturaOriginal={facturaOriginal} /></div>}
+
+        {sustitutoTimbrado && factura.estado === "timbrada" && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-sunrise-400/30 bg-sunrise-300/20 px-3.5 py-3 dark:bg-sunrise-400/10">
+            <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-sunrise-500" />
+            <p className="text-sm text-ink">
+              Ya existe un sustituto timbrado ({" "}
+              <Link href={`${ROUTES.facturacion}/${sustitutoTimbrado.id}`} className="font-mono font-medium text-brand-700 hover:underline dark:text-brand-300">
+                {sustitutoTimbrado.folioFiscal}
+              </Link>
+              {" "}). Puedes cancelar esta factura con el motivo de sustitución.
+            </p>
+          </div>
+        )}
+
+        {errorRefacturar && (
+          <p className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {errorRefacturar}
+          </p>
+        )}
+
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <a
             href={`${ROUTES.facturacion}/${factura.id}/pdf`}
@@ -136,6 +219,17 @@ export function FacturaDetalleView({
               Enviar por correo
             </button>
           )}
+          {puedeGestionar && factura.estado === "timbrada" && !sustitutoTimbrado && (
+            <button
+              type="button"
+              disabled={refacturando || isPending}
+              onClick={refacturar}
+              className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 disabled:opacity-70 dark:hover:text-brand-300"
+            >
+              {refacturando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat className="h-4 w-4" />}
+              Refacturar
+            </button>
+          )}
           {puedeGestionar && factura.estado === "timbrada" && (
             <button
               type="button"
@@ -147,10 +241,50 @@ export function FacturaDetalleView({
             </button>
           )}
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 shadow-soft">
-        <p className="mb-4 text-sm font-semibold text-ink-soft">Conceptos</p>
+      {saldoPendiente !== null && (
+        <Card bodyClassName="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-sunrise-300 to-sunrise-500 text-white">
+                <Banknote className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted">Saldo pendiente</p>
+                <p className="mt-0.5 font-display text-xl font-bold text-ink">{formatoMoneda.format(saldoPendiente)}</p>
+              </div>
+            </div>
+            {puedeGestionar && saldoPendiente > 0 && (
+              <Link
+                href={`${ROUTES.facturacion}/pagos/nuevo?contacto=${factura.idContactoFacturacion}`}
+                className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
+              >
+                <Banknote className="h-4 w-4" />
+                Registrar pago
+              </Link>
+            )}
+          </div>
+
+          {pagosAplicados.length > 0 && (
+            <div className="mt-4 divide-y divide-line border-t border-line">
+              {pagosAplicados.map((p) => (
+                <Link
+                  key={p.idPago}
+                  href={`${ROUTES.facturacion}/pagos/${p.idPago}`}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-brand-700 dark:hover:text-brand-300"
+                >
+                  <span className="font-mono text-xs text-muted">{p.folioFiscal}</span>
+                  <span className="text-muted">{p.fechaPago}</span>
+                  <span className="font-medium text-ink">{formatoMoneda.format(p.impPagado)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      <Card title="Conceptos" bodyClassName="p-5">
         <div className="overflow-hidden rounded-2xl border border-line">
           <table className="w-full text-sm">
             <thead>
@@ -176,9 +310,15 @@ export function FacturaDetalleView({
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
-      <CancelarFacturaModal open={cancelando} idFactura={factura.id} onClose={() => setCancelando(false)} />
+      <CancelarFacturaModal
+        open={cancelando}
+        idFactura={factura.id}
+        onClose={() => setCancelando(false)}
+        motivoInicial={sustitutoTimbrado ? "01" : "02"}
+        folioSustitucionInicial={sustitutoTimbrado?.folioFiscal ?? ""}
+      />
       <EnviarCorreoModal open={enviandoCorreo} idFactura={factura.id} onClose={() => setEnviandoCorreo(false)} />
     </div>
   );
@@ -219,7 +359,7 @@ function EliminarBorradorModal({
             onClick={() =>
               startTransition(async () => {
                 await eliminarBorradorAction(idFactura);
-                router.push(ROUTES.facturacion);
+                router.push(`${ROUTES.facturacion}/consultar`);
                 router.refresh();
               })
             }

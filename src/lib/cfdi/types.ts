@@ -67,6 +67,16 @@ export interface ReceptorCfdi {
   usoCfdi: string;
 }
 
+/**
+ * `CfdiRelacionados`: liga este comprobante a uno o más CFDI previos.
+ * Nuvio solo emite el caso de refacturación (`TipoRelacion = "04"`,
+ * sustitución de los CFDI previos), siempre con un único UUID.
+ */
+export interface CfdiRelacionadosCfdi {
+  tipoRelacion: string;
+  uuids: string[];
+}
+
 /** Todo lo que el XML necesita, ya traducido y sin rastro de la BD. */
 export interface ComprobanteCfdi {
   serie: string;
@@ -79,6 +89,8 @@ export interface ComprobanteCfdi {
   moneda: string;
   tipoDeComprobante: string;
   lugarExpedicion: string;
+  /** Presente solo al refacturar: liga este CFDI al que sustituye. */
+  cfdiRelacionados?: CfdiRelacionadosCfdi | null;
   emisor: EmisorCfdi;
   receptor: ReceptorCfdi;
   conceptos: ConceptoCfdi[];

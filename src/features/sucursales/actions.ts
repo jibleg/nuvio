@@ -8,11 +8,14 @@ import { sucursalFormSchema, updateSucursalSchema, type SucursalFormInput, type 
 import { getSucursalById } from "./queries";
 import { createSucursalUseCase } from "./use-cases/create-sucursal";
 import { updateSucursalUseCase } from "./use-cases/update-sucursal";
-import { setActivo } from "./repositories/sucursales-repository";
-import type { SucursalDetalle } from "./types";
+import { getLogoMeta, setActivo, setLogo } from "./repositories/sucursales-repository";
+import type { LogoDetalle, LogoMutationResult, SucursalDetalle } from "./types";
 
 const VIEW = "empresas.acceso";
 const MANAGE = "empresas.write";
+
+const TIPOS_LOGO_PERMITIDOS = new Set(["image/png", "image/jpeg"]);
+const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024;
 
 export type SucursalActionResult = { error: string };
 
@@ -64,4 +67,30 @@ export async function setSucursalActivoAction(
 
   await setActivo(id, session.cliente.id, activo);
   revalidatePath(ROUTES.sucursales);
+}
+
+export async function getLogoDetalleAction(idEmpresa: number): Promise<LogoDetalle | null> {
+  const session = await requirePermission(VIEW);
+  return getLogoMeta(idEmpresa, session.cliente.id);
+}
+
+export async function subirLogoAction(idEmpresa: number, formData: FormData): Promise<LogoMutationResult> {
+  const session = await requirePermission(MANAGE);
+
+  const archivo = formData.get("logo");
+  if (!(archivo instanceof File)) return { ok: false, error: "Selecciona una imagen." };
+  if (!TIPOS_LOGO_PERMITIDOS.has(archivo.type)) {
+    return { ok: false, error: "El logo debe ser una imagen PNG o JPG." };
+  }
+  if (archivo.size > TAMANO_MAXIMO_LOGO) {
+    return { ok: false, error: "El logo no debe pesar más de 2 MB." };
+  }
+
+  await setLogo(idEmpresa, session.cliente.id, {
+    data: Buffer.from(await archivo.arrayBuffer()),
+    mimeType: archivo.type,
+    nombre: archivo.name,
+  });
+  revalidatePath(ROUTES.sucursales);
+  return { ok: true };
 }

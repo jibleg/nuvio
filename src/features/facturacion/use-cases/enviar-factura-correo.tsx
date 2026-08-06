@@ -1,8 +1,5 @@
-import { renderToBuffer } from "@react-pdf/renderer";
-import QRCode from "qrcode";
-import { datosTimbre, urlQrSat } from "@/lib/cfdi/tfd";
 import { enviarCorreo, type EnviarCorreoResult } from "@/lib/email/sparkpost";
-import { FacturaPdfDocument } from "../pdf/FacturaPdf";
+import { armarPdfFactura } from "../pdf/armar-pdf-factura";
 import { getFacturaDetalle, getXmlTimbrado } from "../repositories/facturas-repository";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,19 +19,7 @@ export async function enviarFacturaCorreoUseCase(
   }
 
   const xml = await getXmlTimbrado(idFactura, idCliente);
-  const timbre = datosTimbre(xml);
-  const qrUrl = urlQrSat({
-    uuid: factura.folioFiscal,
-    rfcEmisor: factura.emisorRfc ?? "",
-    rfcReceptor: factura.receptorRfc ?? "",
-    total: timbre.total ?? (factura.total ? Number(factura.total) : null),
-    selloCfdi: timbre.selloCfdi,
-  });
-  const qrDataUrl = qrUrl ? await QRCode.toDataURL(qrUrl, { margin: 0 }) : null;
-
-  const pdfBuffer = await renderToBuffer(
-    <FacturaPdfDocument factura={factura} timbre={timbre} qrDataUrl={qrDataUrl} />,
-  );
+  const pdfBuffer = await armarPdfFactura(factura, idCliente);
   const nombreArchivo = `factura-${factura.folioFiscal ?? factura.id}`;
 
   const html = `

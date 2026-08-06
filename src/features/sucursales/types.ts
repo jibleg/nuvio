@@ -52,3 +52,7 @@ export type UpdateSucursalData = SucursalFormData & { activo: boolean };
 export type SucursalMutationResult =
   | { ok: true; id?: number }
   | { ok: false; error: string };
+
+export type LogoDetalle = { tieneLogo: boolean; nombre: string | null };
+
+export type LogoMutationResult = { ok: true } | { ok: false; error: string };

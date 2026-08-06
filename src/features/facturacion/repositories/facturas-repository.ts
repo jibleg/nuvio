@@ -2,17 +2,25 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { concepto, conceptoImpuestos, contactosFacturacion, empresas, factura, servicio, unidad } from "@/lib/db/schema";
 import { ahoraCfdi } from "@/lib/cfdi/fecha";
-import type { ConceptoInput, CrearBorradorData, EstadoFactura, FacturaDetalle, FacturaListItem } from "../types";
+import type {
+  ConceptoInput,
+  CrearBorradorData,
+  EstadoFactura,
+  FacturaDetalle,
+  FacturaListItem,
+  FacturaResumenRelacion,
+} from "../types";
 
-/** `cfdi.tipo_comprobante` — único que emite Nuvio en el MVP. */
-const TIPO_COMPROBANTE_INGRESO = 1;
+/** `cfdi.tipo_comprobante` — comprobante de Ingreso. Compartido con `pagos-repository` (tipo Pago = 5, ver `TIPO_COMPROBANTE_PAGO` en `../types`). */
+export const TIPO_COMPROBANTE_INGRESO = 1;
 /** `cfdi.impuesto` — IVA. */
 const IMPUESTO_IVA = 2;
 /** `cfdi.factor` — Tasa (vs. Cuota/Exento). */
 const FACTOR_TASA = 1;
 const TASA_IVA = 0.16;
 
-function toEstado(tipoFactura: number | null, estatusCancelacion: string | null): EstadoFactura {
+/** Compartido con `pagos-repository`: mismo criterio (tipoFactura + estatusCancelacion) para cualquier fila de `cfdi.factura`, sea Ingreso o Pago. */
+export function toEstado(tipoFactura: number | null, estatusCancelacion: string | null): EstadoFactura {
   if (estatusCancelacion === "cancelada") return "cancelada";
   return tipoFactura === 1 ? "timbrada" : "borrador";
 }
@@ -34,13 +42,19 @@ const listSelect = {
   idContactoFacturacion: factura.idContactoFacturacion,
 };
 
-/** Facturas de un cliente — filtra por `cve_cliente` de la empresa EMISORA (`factura` no tiene columna de tenant propia). */
+/**
+ * Facturas de un cliente — filtra por `cve_cliente` de la empresa EMISORA
+ * (`factura` no tiene columna de tenant propia) y por `idTipoComprobante`
+ * Ingreso: los complementos de pago (tipo P, ver `TIPO_COMPROBANTE_PAGO` en
+ * `../types`) son otra fila de esta misma tabla y tienen su propio listado
+ * (`pagos-repository`), no deben mezclarse aquí.
+ */
 export async function listFacturas(idCliente: number): Promise<FacturaListItem[]> {
   const rows = await db
     .select(listSelect)
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
-    .where(eq(empresas.idCliente, idCliente))
+    .where(and(eq(empresas.idCliente, idCliente), eq(factura.idTipoComprobante, TIPO_COMPROBANTE_INGRESO)))
     .orderBy(desc(factura.id));
 
   return rows.map((r) => ({
@@ -68,10 +82,18 @@ export async function getFacturaDetalle(id: number, idCliente: number): Promise<
       idMetodo: factura.idMetodo,
       idMoneda: factura.idMoneda,
       observacion: factura.observacion,
+      cfdiRelacionado: factura.cfdiRelacionado,
+      tipoRelacion: factura.tipoRelacion,
     })
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
-    .where(and(eq(factura.id, id), eq(empresas.idCliente, idCliente)))
+    .where(
+      and(
+        eq(factura.id, id),
+        eq(empresas.idCliente, idCliente),
+        eq(factura.idTipoComprobante, TIPO_COMPROBANTE_INGRESO),
+      ),
+    )
     .limit(1);
   if (!row || !row.idEmpresaEmisora || !row.idContactoFacturacion) return null;
 
@@ -114,6 +136,8 @@ export async function getFacturaDetalle(id: number, idCliente: number): Promise<
     idMetodo: row.idMetodo,
     idMoneda: row.idMoneda,
     observacion: row.observacion,
+    cfdiRelacionado: row.cfdiRelacionado,
+    tipoRelacion: row.tipoRelacion,
     conceptos: conceptoRows.map((c) => ({
       idServicio: c.idServicio,
       claveProdServ: c.claveProdServ ?? "",
@@ -180,6 +204,8 @@ export async function createBorrador(idUsuario: number, data: CrearBorradorData)
       idUsuario,
       idTipoComprobante: TIPO_COMPROBANTE_INGRESO,
       observacion: data.observacion,
+      cfdiRelacionado: data.cfdiRelacionado ?? null,
+      tipoRelacion: data.tipoRelacion ?? null,
       fecha,
       hora,
       tipoFactura: 0,
@@ -244,6 +270,57 @@ export async function esBorradorDelCliente(id: number, idCliente: number): Promi
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
     .where(and(eq(factura.id, id), eq(empresas.idCliente, idCliente), eq(factura.tipoFactura, 0)))
+    .limit(1);
+  return !!row;
+}
+
+/** El CFDI (de este cliente) con este folio fiscal, si existe — para enlazar "factura original" desde el sustituto. */
+export async function findFacturaPorFolioFiscal(
+  folioFiscal: string,
+  idCliente: number,
+): Promise<FacturaResumenRelacion | null> {
+  const [row] = await db
+    .select({ id: factura.id, folioFiscal: factura.folioFiscal })
+    .from(factura)
+    .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
+    .where(and(eq(factura.folioFiscal, folioFiscal), eq(empresas.idCliente, idCliente)))
+    .limit(1);
+  return row?.folioFiscal ? { id: row.id, folioFiscal: row.folioFiscal } : null;
+}
+
+/** El CFDI YA TIMBRADO que sustituye a `folioFiscalOriginal` (si ya se timbró) — para el CTA "cancelar la original" desde ella misma. */
+export async function findSustitutoTimbrado(
+  folioFiscalOriginal: string,
+  idCliente: number,
+): Promise<FacturaResumenRelacion | null> {
+  const [row] = await db
+    .select({ id: factura.id, folioFiscal: factura.folioFiscal })
+    .from(factura)
+    .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
+    .where(
+      and(
+        eq(factura.cfdiRelacionado, folioFiscalOriginal),
+        eq(factura.tipoRelacion, "04"),
+        eq(factura.tipoFactura, 1),
+        eq(empresas.idCliente, idCliente),
+      ),
+    )
+    .limit(1);
+  return row?.folioFiscal ? { id: row.id, folioFiscal: row.folioFiscal } : null;
+}
+
+/**
+ * true si `folioFiscal` es el UUID de un CFDI YA TIMBRADO del cliente — usado
+ * para exigir, al cancelar con motivo "01" (sustitución), que el folio de
+ * sustitución sea real y no un texto capturado a mano sin verificar contra
+ * ningún comprobante existente.
+ */
+export async function existeFacturaTimbradaConFolioFiscal(folioFiscal: string, idCliente: number): Promise<boolean> {
+  const [row] = await db
+    .select({ id: factura.id })
+    .from(factura)
+    .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
+    .where(and(eq(factura.folioFiscal, folioFiscal), eq(empresas.idCliente, idCliente), eq(factura.tipoFactura, 1)))
     .limit(1);
   return !!row;
 }

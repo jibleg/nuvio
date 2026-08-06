@@ -110,6 +110,58 @@ export const conceptoImpuestos = cfdi.table("concepto_impuestos", {
   activo: integer("activo").notNull().default(1),
 });
 
+/**
+ * Cabecera de un complemento de pago (CFDI 4.0 tipo "P"): igual que un CSD de
+ * ingreso, el comprobante en sí es una fila de `factura` con
+ * `idTipoComprobante = 5` — esta tabla solo guarda lo propio del pago (nodo
+ * `pago20:Pago`). Heredada de factura-facil, sin usar hasta ahora.
+ */
+export const pago = cfdi.table("pago", {
+  id: integer("cve_pago")
+    .primaryKey()
+    .default(sql`nextval('cfdi.sq_cfdi_pago')`),
+  /** La fila de `factura` (tipo P) que es este comprobante de pago. */
+  idFacturaComplemento: integer("cve_factura_complemento").notNull(),
+  idFormaPago: integer("cve_forma_pago").notNull(),
+  idMoneda: integer("cve_moneda").notNull(),
+  fechaPago: integer("fecha_pago").notNull(),
+  horaPago: integer("hora_pago").notNull(),
+  montoPagado: numeric("monto_pagado", { precision: 18, scale: 4 }).notNull(),
+  numeroOperacion: varchar("numero_operacion", { length: 50 }).notNull(),
+  cuentaOrdenante: varchar("cuenta_ordenante", { length: 50 }),
+  cuentaBeneficiario: varchar("cuenta_beneficiario", { length: 50 }),
+  activo: integer("activo").default(1),
+});
+
+/**
+ * Un documento (factura de ingreso PPD) que un pago liquida, total o
+ * parcialmente (nodo `pago20:DoctoRelacionado`). `idFactura` apunta al CFDI
+ * de ingreso pagado; `idPago` al complemento que lo paga.
+ */
+export const documentoRelacionado = cfdi.table("documento_relacionado", {
+  id: integer("cve_documento_relacionado")
+    .primaryKey()
+    .default(sql`nextval('cfdi.sq_cfdi_documento_relacionado')`),
+  idPago: integer("cve_pago").notNull(),
+  /** El CFDI de ingreso (PPD) que se está pagando. */
+  idFactura: integer("cve_factura").notNull(),
+  idMoneda: integer("cve_moneda").notNull(),
+  idMetodo: integer("cve_metodo").notNull(),
+  serieDocumento: varchar("serie_documento", { length: 5 }).notNull(),
+  folioDocumento: integer("folio_documento").notNull(),
+  parcialidadDocumento: varchar("parcialidad_documento", { length: 10 }),
+  importeSaldo: numeric("importe_saldo", { precision: 18, scale: 4 }).notNull(),
+  importePagado: numeric("importe_pagado", { precision: 18, scale: 4 }).notNull(),
+  importeInsoluto: numeric("importe_insoluto", { precision: 18, scale: 4 }).notNull(),
+  fecha: integer("fecha"),
+  hora: integer("hora"),
+  activo: integer("activo").notNull().default(1),
+  /** Folio fiscal (UUID) del CFDI de ingreso pagado — snapshot, no join. */
+  folioFiscal: varchar("folio_fiscal", { length: 50 }),
+  importeGravado: numeric("importe_gravado", { precision: 18, scale: 4 }),
+  importeExentado: numeric("importe_exentado", { precision: 18, scale: 4 }),
+});
+
 // ---- Catálogos SAT (solo lectura, ya sembrados) ----
 
 export const regimenFiscal = cfdi.table("regimen_fiscal", {

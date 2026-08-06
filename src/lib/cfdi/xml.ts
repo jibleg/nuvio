@@ -277,9 +277,19 @@ export function construirXml(c: ComprobanteCfdi, noCertificado: string, certific
 
   const conceptos = `<cfdi:Conceptos>${c.conceptos.map((concepto) => xmlConcepto(concepto, c.decimales)).join("")}</cfdi:Conceptos>`;
 
+  // `CfdiRelacionados` va como PRIMER hijo de `Comprobante` (antes de `Emisor`)
+  // cuando existe — es como la refacturación liga el sustituto al original.
+  const cfdiRelacionados =
+    c.cfdiRelacionados && c.cfdiRelacionados.uuids.length > 0
+      ? `<cfdi:CfdiRelacionados ${attrs([["TipoRelacion", c.cfdiRelacionados.tipoRelacion]])}>` +
+        c.cfdiRelacionados.uuids.map((uuid) => `<cfdi:CfdiRelacionado ${attrs([["UUID", uuid]])}/>`).join("") +
+        `</cfdi:CfdiRelacionados>`
+      : "";
+
   return (
     `<?xml version="1.0" encoding="UTF-8"?>` +
     `<cfdi:Comprobante xmlns:cfdi="${XMLNS_CFDI}" xmlns:xsi="${XMLNS_XSI}" xsi:schemaLocation="${SCHEMA_LOCATION}" ${comprobante}${SELLO_VACIO}>` +
+    cfdiRelacionados +
     emisor +
     receptor +
     conceptos +

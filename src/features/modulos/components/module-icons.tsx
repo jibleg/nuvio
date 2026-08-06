@@ -1,4 +1,5 @@
 import {
+  CreditCard,
   FileText,
   Handshake,
   Home,
@@ -31,6 +32,7 @@ const ICONS: Record<string, LucideIcon> = {
   handshake: Handshake,
   search: Search,
   "plus-circle": PlusCircle,
+  "credit-card": CreditCard,
 };
 
 /** Resuelve una clave de icono a su icono de lucide (módulo plano, server/client). */

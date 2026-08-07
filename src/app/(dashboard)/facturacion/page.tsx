@@ -20,6 +20,10 @@ export default async function FacturacionDashboardPage() {
     getClientesTop(session.cliente.id),
   ]);
 
+  const hoy = new Date();
+  const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
+  const hoyIso = hoy.toISOString().slice(0, 10);
+
   return (
     <div>
       <div className="mb-6">
@@ -33,6 +37,8 @@ export default async function FacturacionDashboardPage() {
         cuentasPorCobrar={cuentasPorCobrar}
         topClientes={topClientes}
         puedeGestionar={puedeGestionar}
+        paqueteDesdeDefault={primerDiaMes}
+        paqueteHastaDefault={hoyIso}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import {
   findSustitutoTimbrado,
   getFacturaDetalle,
   listFacturas,
+  listFacturasTimbradasEnRango,
 } from "./repositories/facturas-repository";
 import {
   getPagoDetalle,
@@ -21,6 +22,7 @@ import {
   listFacturasPorPagar,
   listPagos,
   listPagosDeFactura,
+  listPagosTimbradosEnRango,
 } from "./repositories/pagos-repository";
 import type { EmisorListItem } from "./repositories/emisor-repository";
 import type {
@@ -91,4 +93,24 @@ export function getClientesTop(idCliente: number, limite?: number, dias?: number
 
 export function getCuentasPorCobrar(idCliente: number): Promise<{ buckets: AntiguedadBucket[]; total: number }> {
   return getCuentasPorCobrarPorAntiguedad(idCliente);
+}
+
+// ---- Paquete contable ----
+
+export function getFacturasTimbradasEnRango(
+  idCliente: number,
+  desde: string,
+  hasta: string,
+  idEmpresaEmisora?: number,
+): Promise<{ id: number; folioFiscal: string | null }[]> {
+  return listFacturasTimbradasEnRango(idCliente, desde, hasta, idEmpresaEmisora);
+}
+
+export function getPagosTimbradosEnRango(
+  idCliente: number,
+  desde: string,
+  hasta: string,
+  idEmpresaEmisora?: number,
+): Promise<{ id: number; folioFiscal: string | null }[]> {
+  return listPagosTimbradosEnRango(idCliente, desde, hasta, idEmpresaEmisora);
 }

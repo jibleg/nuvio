@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Banknote, CheckCircle2, FileText, Pencil, Plus, Trophy, Wallet } from "lucide-react";
+import { Banknote, CheckCircle2, Download, FileText, Pencil, Plus, Trophy, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
@@ -82,12 +82,16 @@ export function Dashboard({
   cuentasPorCobrar,
   topClientes,
   puedeGestionar,
+  paqueteDesdeDefault,
+  paqueteHastaDefault,
 }: {
   resumen: ResumenFacturacion;
   facturadoDiario: FacturadoDia[];
   cuentasPorCobrar: { buckets: AntiguedadBucket[]; total: number };
   topClientes: ClienteTop[];
   puedeGestionar: boolean;
+  paqueteDesdeDefault: string;
+  paqueteHastaDefault: string;
 }) {
   const maxCliente = Math.max(1, ...topClientes.map((c) => c.total));
 
@@ -246,6 +250,52 @@ export function Dashboard({
             ))}
           </div>
         )}
+      </Card>
+
+      <Card
+        title="Paquete contable"
+        description="XML y PDF de todas las facturas y pagos timbrados del periodo, en un ZIP — listo para tu contador"
+        bodyClassName="p-5 pt-3"
+      >
+        <form
+          action={`${ROUTES.facturacion}/paquete`}
+          method="get"
+          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+        >
+          <div className="flex-1">
+            <label htmlFor="paquete-desde" className="mb-1 block text-xs font-medium text-muted">
+              Desde
+            </label>
+            <input
+              id="paquete-desde"
+              type="date"
+              name="desde"
+              defaultValue={paqueteDesdeDefault}
+              required
+              className="w-full rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-ink outline-none focus:border-brand-400"
+            />
+          </div>
+          <div className="flex-1">
+            <label htmlFor="paquete-hasta" className="mb-1 block text-xs font-medium text-muted">
+              Hasta
+            </label>
+            <input
+              id="paquete-hasta"
+              type="date"
+              name="hasta"
+              defaultValue={paqueteHastaDefault}
+              required
+              className="w-full rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-ink outline-none focus:border-brand-400"
+            />
+          </div>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
+          >
+            <Download className="h-4 w-4" />
+            Descargar ZIP
+          </button>
+        </form>
       </Card>
     </div>
   );

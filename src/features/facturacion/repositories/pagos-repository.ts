@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { concepto, conceptoImpuestos, documentoRelacionado, empresas, factura, formaPago, pago } from "@/lib/db/schema";
 import { ahoraCfdi } from "@/lib/cfdi/fecha";
@@ -605,6 +605,37 @@ export async function getDatosParaTimbrarPago(idFactura: number, idCliente: numb
     numeroOperacion: cab.numeroOperacion,
     documentos: documentosConImpuesto,
   };
+}
+
+/**
+ * Complementos de pago (CFDI tipo P) timbrados y vigentes en un rango de
+ * fecha (por `factura.fechaTimbrado`, mismo criterio que
+ * `listFacturasTimbradasEnRango`) — para el paquete contable (Fase D).
+ */
+export async function listPagosTimbradosEnRango(
+  idCliente: number,
+  desde: string,
+  hasta: string,
+  idEmpresaEmisora?: number,
+): Promise<{ id: number; folioFiscal: string | null }[]> {
+  const condiciones = [
+    eq(empresas.idCliente, idCliente),
+    eq(factura.idTipoComprobante, TIPO_COMPROBANTE_PAGO),
+    eq(factura.tipoFactura, 1),
+    sql`coalesce(${factura.estatusCancelacion}, '') <> 'cancelada'`,
+    gte(factura.fechaTimbrado, desde),
+    lte(factura.fechaTimbrado, `${hasta}T23:59:59`),
+  ];
+  if (idEmpresaEmisora) condiciones.push(eq(factura.idEmpresaEmisora, idEmpresaEmisora));
+
+  const rows = await db
+    .select({ id: factura.id, folioFiscal: factura.folioFiscal })
+    .from(factura)
+    .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
+    .where(and(...condiciones))
+    .orderBy(factura.id);
+
+  return rows;
 }
 
 function fechaEnteraATexto(valor: number | null): string | null {

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { concepto, conceptoImpuestos, contactosFacturacion, empresas, factura, servicio, unidad } from "@/lib/db/schema";
 import { ahoraCfdi } from "@/lib/cfdi/fecha";
@@ -429,6 +429,39 @@ export async function marcarCancelacion(
  * snapshot de la factura — el CFDI no imprime el correo, así que no hace
  * falta congelarlo; usar el más reciente es lo correcto para reenviar).
  */
+/**
+ * Facturas de ingreso timbradas y vigentes en un rango de fecha (por
+ * `fechaTimbrado`, formato `YYYY-MM-DD...` que ordena lexicográficamente
+ * igual que cronológicamente) — para el paquete contable (Fase D). Excluye
+ * canceladas: el contador no necesita el XML/PDF de un CFDI que el SAT ya no
+ * reconoce como vigente.
+ */
+export async function listFacturasTimbradasEnRango(
+  idCliente: number,
+  desde: string,
+  hasta: string,
+  idEmpresaEmisora?: number,
+): Promise<{ id: number; folioFiscal: string | null }[]> {
+  const condiciones = [
+    eq(empresas.idCliente, idCliente),
+    eq(factura.idTipoComprobante, TIPO_COMPROBANTE_INGRESO),
+    eq(factura.tipoFactura, 1),
+    sql`coalesce(${factura.estatusCancelacion}, '') <> 'cancelada'`,
+    gte(factura.fechaTimbrado, desde),
+    lte(factura.fechaTimbrado, `${hasta}T23:59:59`),
+  ];
+  if (idEmpresaEmisora) condiciones.push(eq(factura.idEmpresaEmisora, idEmpresaEmisora));
+
+  const rows = await db
+    .select({ id: factura.id, folioFiscal: factura.folioFiscal })
+    .from(factura)
+    .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
+    .where(and(...condiciones))
+    .orderBy(factura.id);
+
+  return rows;
+}
+
 export async function getEmailReceptorActual(idFactura: number, idCliente: number): Promise<string | null> {
   const [row] = await db
     .select({ email: contactosFacturacion.email })

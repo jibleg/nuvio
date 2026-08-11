@@ -21,7 +21,7 @@ cd "$(dirname "$0")"
 cyan "▸ 1/3  Subiendo código fuente a ${SSH_HOST}:${REMOTE_DIR} ..."
 rsync -az --delete \
   --exclude node_modules --exclude .next --exclude out --exclude .git \
-  --exclude assets --exclude '.DS_Store' --exclude '*.log' \
+  --exclude assets --exclude '.DS_Store' --exclude '*.log' --exclude '.env*' \
   -e "ssh -o ConnectTimeout=20" \
   ./ "${SSH_HOST}:${REMOTE_DIR}/"
 

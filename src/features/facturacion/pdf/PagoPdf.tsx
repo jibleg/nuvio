@@ -97,6 +97,28 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   avisoBorradorTexto: { fontSize: 7.5, color: SUNRISE, fontWeight: 700, textAlign: "center" },
+  avisoPruebaBanda: { backgroundColor: SUNRISE, paddingVertical: 5, paddingHorizontal: 32 },
+  avisoPruebaBandaTexto: {
+    fontSize: 7.5,
+    fontWeight: 700,
+    color: "#ffffff",
+    textAlign: "center",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  marcaAguaPrueba: {
+    position: "absolute",
+    top: 340,
+    left: 56,
+    width: 500,
+    fontSize: 72,
+    fontWeight: 900,
+    color: SUNRISE,
+    opacity: 0.15,
+    textAlign: "center",
+    letterSpacing: 6,
+    transform: "rotate(-30deg)",
+  },
   promoAcento: { height: 4, backgroundColor: AURORA_500 },
   promoHero: {
     backgroundColor: BRAND_700,
@@ -169,10 +191,17 @@ export function PagoPdfDocument({
   logoDataUrl?: string | null;
 }) {
   const esBorrador = !timbre;
+  /** Timbrado, pero contra el ambiente de pruebas (sandbox) del PAC: el folio fiscal existe pero no tiene validez fiscal ante el SAT. */
+  const esPrueba = !esBorrador && pago.ambienteTimbrado === "sandbox";
 
   return (
     <Document>
       <Page size="LETTER" style={styles.page}>
+        {esPrueba && (
+          <Text style={styles.marcaAguaPrueba} fixed>
+            PRUEBA
+          </Text>
+        )}
         <View style={styles.hero}>
           <View style={styles.heroEmisor}>
             <Link src={env.APP_URL} style={styles.heroLogoCarta}>
@@ -185,7 +214,11 @@ export function PagoPdfDocument({
           </View>
           <View style={styles.heroDerecha}>
             <Text style={styles.heroTitulo}>
-              {esBorrador ? "COMPLEMENTO DE PAGO · BORRADOR" : "COMPLEMENTO DE PAGO · CFDI 4.0"}
+              {esBorrador
+                ? "COMPLEMENTO DE PAGO · BORRADOR"
+                : esPrueba
+                  ? "COMPLEMENTO DE PAGO · CFDI 4.0 · PRUEBA"
+                  : "COMPLEMENTO DE PAGO · CFDI 4.0"}
             </Text>
             {esBorrador ? (
               <Text style={styles.heroFolio}>Vista previa — sin folio fiscal</Text>
@@ -201,6 +234,13 @@ export function PagoPdfDocument({
           </View>
         </View>
         <View style={styles.heroAcento} />
+        {esPrueba && (
+          <View style={styles.avisoPruebaBanda}>
+            <Text style={styles.avisoPruebaBandaTexto}>
+              Documento de prueba — timbrado en ambiente sandbox, sin validez fiscal ante el SAT
+            </Text>
+          </View>
+        )}
 
         <View style={styles.body}>
           <View style={styles.filaBloques}>

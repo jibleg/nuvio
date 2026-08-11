@@ -43,6 +43,17 @@ const optionalIdRegimen = z
   .nullable()
   .default(null);
 
+/** Serie del CFDI: prefijo opcional de folio a nivel de empresa (`corporativo.empresas.serie`, varchar(5)). */
+const optionalSerie = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .max(5, "Máximo 5 caracteres")
+  .regex(/^[A-Z0-9]*$/, "Solo letras y números")
+  .transform((v) => (v === "" ? null : v))
+  .nullable()
+  .default(null);
+
 export const sucursalFormSchema = z
   .object({
     nombreComercial: z.string().trim().min(1, "Requerido"),
@@ -52,6 +63,7 @@ export const sucursalFormSchema = z
     razonSocialPropia: optionalText,
     rfcPropio: optionalRfc,
     idRegimen: optionalIdRegimen,
+    serie: optionalSerie,
     calle: optionalText,
     colonia: optionalText,
     ciudad: optionalText,

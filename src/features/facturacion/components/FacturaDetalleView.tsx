@@ -13,14 +13,17 @@ import {
   FileText,
   Loader2,
   Mail,
+  RefreshCw,
   Repeat,
+  SearchCheck,
   Trash2,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ROUTES } from "@/config/routes";
-import { eliminarBorradorAction, refacturarAction } from "../actions";
+import { notifyError, notifySuccess } from "@/lib/toast";
+import { eliminarBorradorAction, recurrirFacturaAction, refacturarAction, verificarEstatusCancelacionAction } from "../actions";
 import type { FacturaDetalle, FacturaResumenRelacion, PagoAplicado } from "../types";
 import { CancelarFacturaModal } from "./CancelarFacturaModal";
 import { EnviarCorreoModal } from "./EnviarCorreoModal";
@@ -74,9 +77,26 @@ export function FacturaDetalleView({
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
   const [refacturando, setRefacturando] = useState(false);
   const [errorRefacturar, setErrorRefacturar] = useState<string | null>(null);
+  const [recurriendo, setRecurriendo] = useState(false);
+  const [errorRecurrir, setErrorRecurrir] = useState<string | null>(null);
+  const [verificando, setVerificando] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [verPdf, setVerPdf] = useState(false);
   const pdfSrc = `${ROUTES.facturacion}/${factura.id}/pdf`;
+
+  const verificarEstatusCancelacion = () => {
+    setVerificando(true);
+    startTransition(async () => {
+      const result = await verificarEstatusCancelacionAction(factura.id);
+      setVerificando(false);
+      if (!result.ok) {
+        notifyError(result.error);
+        return;
+      }
+      notifySuccess(result.mensaje);
+      router.refresh();
+    });
+  };
 
   const refacturar = () => {
     setErrorRefacturar(null);
@@ -86,6 +106,21 @@ export function FacturaDetalleView({
       setRefacturando(false);
       if (!result.ok) {
         setErrorRefacturar(result.error);
+        return;
+      }
+      router.push(`${ROUTES.facturacion}/${result.id}`);
+      router.refresh();
+    });
+  };
+
+  const recurrir = () => {
+    setErrorRecurrir(null);
+    setRecurriendo(true);
+    startTransition(async () => {
+      const result = await recurrirFacturaAction(factura.id);
+      setRecurriendo(false);
+      if (!result.ok) {
+        setErrorRecurrir(result.error);
         return;
       }
       router.push(`${ROUTES.facturacion}/${result.id}`);
@@ -170,7 +205,20 @@ export function FacturaDetalleView({
         {factura.estatusCancelacion && AVISO_CANCELACION[factura.estatusCancelacion] && (
           <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-sunrise-400/30 bg-sunrise-300/20 px-3.5 py-3 dark:bg-sunrise-400/10">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-sunrise-500" />
-            <p className="text-sm text-ink">{AVISO_CANCELACION[factura.estatusCancelacion]}</p>
+            <div className="flex-1">
+              <p className="text-sm text-ink">{AVISO_CANCELACION[factura.estatusCancelacion]}</p>
+              {puedeGestionar && factura.estatusCancelacion === "solicitada" && (
+                <button
+                  type="button"
+                  disabled={verificando || isPending}
+                  onClick={verificarEstatusCancelacion}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 transition-colors hover:text-brand-800 disabled:opacity-60 dark:text-brand-300 dark:hover:text-brand-200"
+                >
+                  {verificando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SearchCheck className="h-3.5 w-3.5" />}
+                  Verificar estatus ante el SAT
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -193,6 +241,13 @@ export function FacturaDetalleView({
           <p className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {errorRefacturar}
+          </p>
+        )}
+
+        {errorRecurrir && (
+          <p className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {errorRecurrir}
           </p>
         )}
 
@@ -224,6 +279,18 @@ export function FacturaDetalleView({
             >
               {refacturando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat className="h-4 w-4" />}
               Refacturar
+            </button>
+          )}
+          {puedeGestionar && factura.estado === "timbrada" && (
+            <button
+              type="button"
+              disabled={recurriendo || isPending}
+              onClick={recurrir}
+              title="Crea una nueva factura independiente con los mismos datos, para el siguiente periodo"
+              className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 disabled:opacity-70 dark:hover:text-brand-300"
+            >
+              {recurriendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Recurrir factura
             </button>
           )}
           {puedeGestionar && factura.estado === "timbrada" && (

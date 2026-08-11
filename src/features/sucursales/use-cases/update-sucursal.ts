@@ -31,6 +31,7 @@ export async function updateSucursalUseCase(
   await updateSucursalRepo(id, idCliente, {
     nombreComercial: data.nombreComercial,
     nombreCorto: data.nombreCorto,
+    serie: data.serie,
     calle: data.calle,
     colonia: data.colonia,
     ciudad: data.ciudad,

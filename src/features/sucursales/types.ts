@@ -34,6 +34,8 @@ export type SucursalDetalle = SucursalListItem & {
   razonSocialEfectiva: string | null;
   idRegimenEfectivo: number | null;
   ambienteTimbrado: AmbienteFacturacion;
+  /** Serie del CFDI (prefijo de folio), propia de esta empresa — no se hereda de la matriz. */
+  serie: string | null;
 };
 
 export type SucursalFormData = {
@@ -43,6 +45,7 @@ export type SucursalFormData = {
   razonSocialPropia: string | null;
   rfcPropio: string | null;
   idRegimen: number | null;
+  serie: string | null;
   calle: string | null;
   colonia: string | null;
   ciudad: string | null;

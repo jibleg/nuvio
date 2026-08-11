@@ -93,6 +93,7 @@ export async function getSucursalDetalle(
       razonSocial: empresas.razonSocial,
       idRegimen: empresas.idRegimen,
       ambienteTimbrado: empresas.ambienteTimbrado,
+      serie: empresas.serie,
       matrizRfc: matrizAlias.rfc,
       matrizRazonSocial: matrizAlias.razonSocial,
       matrizIdRegimen: matrizAlias.idRegimen,
@@ -111,6 +112,7 @@ export async function getSucursalDetalle(
     razonSocialEfectiva: row.razonSocial ?? row.matrizRazonSocial,
     idRegimenEfectivo: row.idRegimen ?? row.matrizIdRegimen,
     ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
+    serie: row.serie,
   };
 }
 
@@ -164,6 +166,7 @@ export async function createSucursal(data: {
     rfc: data.rfc,
     razonSocial: data.razonSocial,
     idRegimen: data.idRegimen,
+    serie: data.form.serie,
     activo: 1,
     tipo: 1,
   });
@@ -193,6 +196,7 @@ export async function updateSucursal(
       rfc: data.rfc,
       razonSocial: data.razonSocial,
       idRegimen: data.idRegimen,
+      serie: data.serie,
       calle: data.calle,
       colonia: data.colonia,
       ciudad: data.ciudad,

@@ -28,7 +28,9 @@ import { cancelarPagoUseCase } from "./use-cases/cancelar-pago";
 import { crearBorradorUseCase } from "./use-cases/crear-borrador";
 import { crearBorradorPagoUseCase } from "./use-cases/crear-borrador-pago";
 import { enviarFacturaCorreoUseCase } from "./use-cases/enviar-factura-correo";
+import { recurrirFacturaUseCase } from "./use-cases/recurrir-factura";
 import { refacturarUseCase } from "./use-cases/refacturar";
+import { verificarEstatusCancelacionUseCase } from "./use-cases/verificar-estatus-cancelacion";
 import { timbrarFacturaUseCase } from "./use-cases/timbrar-factura";
 import { timbrarPagoUseCase } from "./use-cases/timbrar-pago";
 import type { EmisorListItem } from "./repositories/emisor-repository";
@@ -159,6 +161,15 @@ export async function cancelarFacturaAction(
   return result;
 }
 
+/** Re-consulta al SAT el estatus de una cancelación "en proceso" (sin volver a solicitarla) — ver `verificar-estatus-cancelacion.ts`. Sirve igual para facturas y complementos de pago. */
+export async function verificarEstatusCancelacionAction(id: number): Promise<CancelarResult> {
+  const session = await requirePermission(MANAGE);
+
+  const result = await verificarEstatusCancelacionUseCase(id, session.cliente.id);
+  if (result.ok) revalidarFacturacion();
+  return result;
+}
+
 /** Correo capturado del cliente, para prellenar el modal de envío (editable antes de mandar). */
 export async function getEmailReceptorAction(idFactura: number): Promise<string | null> {
   const session = await requirePermission(VIEW);
@@ -178,6 +189,14 @@ export async function getSaldoPendienteAction(idFactura: number): Promise<number
 export async function refacturarAction(idFacturaOriginal: number): Promise<FacturaMutationResult> {
   const session = await requirePermission(MANAGE);
   const result = await refacturarUseCase(idFacturaOriginal, session.cliente.id, session.usuario.id);
+  if (result.ok) revalidarFacturacion();
+  return result;
+}
+
+/** Crea un borrador nuevo e independiente (sin relación CFDI) a partir de una factura vigente — para servicios recurrentes que se facturan periodo a periodo. Ver `recurrir-factura.ts`. */
+export async function recurrirFacturaAction(idFacturaOriginal: number): Promise<FacturaMutationResult> {
+  const session = await requirePermission(MANAGE);
+  const result = await recurrirFacturaUseCase(idFacturaOriginal, session.cliente.id, session.usuario.id);
   if (result.ok) revalidarFacturacion();
   return result;
 }

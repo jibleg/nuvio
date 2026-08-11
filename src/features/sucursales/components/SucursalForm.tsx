@@ -39,6 +39,12 @@ function buildClientSchema(esMatriz: boolean) {
         .toUpperCase()
         .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
       idRegimen: z.string(),
+      serie: z
+        .string()
+        .trim()
+        .toUpperCase()
+        .max(5, "Máximo 5 caracteres")
+        .refine((v) => /^[A-Z0-9]*$/.test(v), "Solo letras y números"),
       calle: z.string().trim(),
       colonia: z.string().trim(),
       ciudad: z.string().trim(),
@@ -102,6 +108,7 @@ export function SucursalForm({
       razonSocialPropia: initial?.razonSocialPropia ?? "",
       rfcPropio: initial?.rfcPropio ?? "",
       idRegimen: initial?.idRegimenPropio ? String(initial.idRegimenPropio) : "",
+      serie: initial?.serie ?? "",
       calle: initial?.calle ?? "",
       colonia: initial?.colonia ?? "",
       ciudad: initial?.ciudad ?? "",
@@ -150,14 +157,18 @@ export function SucursalForm({
   const [activeTab, setActiveTab] = useState<TabId>(TAB_FISCAL);
 
   const fiscalTieneError = Boolean(
-    errors.razonSocialPropia || errors.rfcPropio || errors.idRegimen || (codigoPostalEsFiscal && errors.codigoPostal),
+    errors.razonSocialPropia ||
+      errors.rfcPropio ||
+      errors.idRegimen ||
+      errors.serie ||
+      (codigoPostalEsFiscal && errors.codigoPostal),
   );
   const direccionTieneError = Boolean(
     errors.nombreComercial || errors.email || (!codigoPostalEsFiscal && errors.codigoPostal),
   );
 
   const onInvalid = (formErrors: FieldErrors<FormValues>) => {
-    if (formErrors.razonSocialPropia || formErrors.rfcPropio) {
+    if (formErrors.razonSocialPropia || formErrors.rfcPropio || formErrors.serie) {
       setActiveTab(TAB_FISCAL);
     } else if (formErrors.codigoPostal) {
       setActiveTab(codigoPostalEsFiscal ? TAB_FISCAL : TAB_DIRECCION);
@@ -250,6 +261,15 @@ export function SucursalForm({
                     {...register("codigoPostal")}
                   />
                 </Field>
+                <Field label="Serie del CFDI" error={errors.serie?.message}>
+                  <input
+                    className={inputClass}
+                    placeholder="A"
+                    maxLength={5}
+                    style={{ textTransform: "uppercase" }}
+                    {...register("serie")}
+                  />
+                </Field>
               </div>
             </div>
           ) : (
@@ -311,6 +331,15 @@ export function SucursalForm({
                       inputMode="numeric"
                       maxLength={5}
                       {...register("codigoPostal")}
+                    />
+                  </Field>
+                  <Field label="Serie del CFDI" error={errors.serie?.message}>
+                    <input
+                      className={inputClass}
+                      placeholder="A"
+                      maxLength={5}
+                      style={{ textTransform: "uppercase" }}
+                      {...register("serie")}
                     />
                   </Field>
                 </div>

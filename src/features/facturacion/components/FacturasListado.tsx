@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Ban, CheckCircle2, FileText, Pencil, Plus, Search, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertCircle, Ban, CheckCircle2, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { ROUTES } from "@/config/routes";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge, type StatusTone } from "@/components/ui/StatusBadge";
+import { recurrirFacturaAction } from "../actions";
 import type { FacturaListItem } from "../types";
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
@@ -130,6 +132,16 @@ export function FacturasListado({
         );
       },
     },
+    ...(puedeGestionar
+      ? [
+          {
+            key: "acciones",
+            header: "",
+            align: "right" as const,
+            render: (f: FacturaListItem) => (f.estado === "timbrada" ? <RecurrirButton id={f.id} /> : null),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -215,6 +227,49 @@ export function FacturasListado({
           />
         }
       />
+    </div>
+  );
+}
+
+/**
+ * Crea, directo desde la fila, un borrador nuevo e independiente clonado de
+ * esta factura (mismo emisor/receptor/conceptos) — pensado para no tener que
+ * entrar al detalle solo para recurrir un servicio periódico. Una sola
+ * acción por fila, así que un botón suelto basta (no amerita el patrón de
+ * dropdown de acciones, reservado para ≥2 acciones).
+ */
+function RecurrirButton({ id }: { id: number }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        title="Recurrir factura: crea un borrador nuevo con los mismos datos, para el siguiente periodo"
+        disabled={isPending}
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await recurrirFacturaAction(id);
+            if (!result.ok) {
+              setError(result.error);
+              return;
+            }
+            router.push(`${ROUTES.facturacion}/${result.id}`);
+          });
+        }}
+        className="grid h-8 w-8 place-items-center rounded-full border border-line text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 disabled:opacity-60 dark:hover:text-brand-300"
+      >
+        {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+      </button>
+      {error && (
+        <p className="absolute right-0 top-full z-10 mt-1.5 w-56 rounded-xl border border-red-500/20 bg-surface px-3 py-2 text-left text-xs font-medium text-red-500 shadow-glow">
+          <AlertCircle className="mr-1 inline h-3.5 w-3.5 shrink-0 align-text-bottom" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

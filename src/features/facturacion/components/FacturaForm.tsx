@@ -2,15 +2,16 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, FileText, Loader2, Package, Pencil, Plus, Save, Trash2, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, Copy, FileText, Loader2, Package, Pencil, Plus, Save, Trash2, UserPlus, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ROUTES } from "@/config/routes";
-import type { ContactoListItem } from "@/features/contactos-facturacion";
+import type { ContactoDetalle, ContactoListItem } from "@/features/contactos-facturacion";
 // Import directo (no vía el barrel `@/features/contactos-facturacion`): ese índice
 // también re-exporta `queries.ts` (lee la BD con `postgres`, incompatible con
-// Client Components). El tipo de arriba sí es seguro porque se borra en compilación.
+// Client Components). Los tipos de arriba sí son seguros porque se borran en compilación.
+import { getContactoDetalleAction } from "@/features/contactos-facturacion/actions";
 import { ContactoForm } from "@/features/contactos-facturacion/components/ContactoForm";
 import {
   actualizarBorradorAction,
@@ -43,6 +44,8 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
   const [clientes, setClientes] = useState<ContactoListItem[]>([]);
   const [catalogos, setCatalogos] = useState<CatalogosFactura | null>(null);
   const [nuevoClienteAbierto, setNuevoClienteAbierto] = useState(false);
+  const [clienteEditando, setClienteEditando] = useState<ContactoDetalle | null>(null);
+  const [cargandoClienteEditar, setCargandoClienteEditar] = useState(false);
 
   useEffect(() => {
     listEmisoresAction().then(setEmisores);
@@ -97,6 +100,16 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
     aplicarDefaultsCliente(clientes.find((c) => String(c.id) === id));
   }
 
+  /** Edita los datos propios del cliente seleccionado (RFC, régimen, domicilio) sin salir de la factura — útil al recurrir una factura si el cliente cambió algún dato desde el periodo anterior. */
+  function editarClienteActual() {
+    if (!idContactoFacturacion) return;
+    setCargandoClienteEditar(true);
+    getContactoDetalleAction(Number(idContactoFacturacion)).then((detalle) => {
+      setCargandoClienteEditar(false);
+      if (detalle) setClienteEditando(detalle);
+    });
+  }
+
   function abrirNuevoConcepto() {
     setEditando(null);
     setModalAbierto(true);
@@ -115,6 +128,11 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
   }
   function eliminarConcepto(key: string) {
     setConceptos((prev) => prev.filter((c) => c.key !== key));
+  }
+
+  /** Clona un concepto tal cual, al final de la lista — para capturar rápido varios conceptos casi iguales: se duplica y luego se ajusta con "Editar" solo lo que cambia. */
+  function duplicarConcepto(c: ConceptoForm) {
+    setConceptos((prev) => [...prev, { ...c, key: crypto.randomUUID() }]);
   }
 
   function validar(): string | null {
@@ -195,14 +213,31 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <span className={labelInlineClass}>Cliente</span>
-              <button
-                type="button"
-                onClick={() => setNuevoClienteAbierto(true)}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:hover:text-brand-300"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                Nuevo cliente
-              </button>
+              <div className="flex items-center gap-3">
+                {idContactoFacturacion && (
+                  <button
+                    type="button"
+                    onClick={editarClienteActual}
+                    disabled={cargandoClienteEditar}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 disabled:opacity-60 dark:hover:text-brand-300"
+                  >
+                    {cargandoClienteEditar ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Pencil className="h-3.5 w-3.5" />
+                    )}
+                    Editar
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNuevoClienteAbierto(true)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Nuevo cliente
+                </button>
+              </div>
             </div>
             <SearchableSelect
               value={idContactoFacturacion}
@@ -334,6 +369,15 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
+                            onClick={() => duplicarConcepto(c)}
+                            aria-label="Duplicar concepto"
+                            title="Duplicar: agrega una copia para capturar rápido conceptos casi iguales"
+                            className="grid h-8 w-8 place-items-center rounded-full text-muted transition-colors hover:bg-cloud hover:text-brand-700 dark:hover:text-brand-300"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => abrirEdicionConcepto(c)}
                             aria-label="Editar concepto"
                             className="grid h-8 w-8 place-items-center rounded-full text-muted transition-colors hover:bg-cloud hover:text-brand-700 dark:hover:text-brand-300"
@@ -426,6 +470,28 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
           }}
           onCancel={() => setNuevoClienteAbierto(false)}
         />
+      </Modal>
+
+      <Modal
+        open={clienteEditando !== null}
+        onClose={() => setClienteEditando(null)}
+        title="Editar cliente"
+        description="Corrige los datos propios de este cliente sin salir de la factura."
+        size="lg"
+        closeOnOverlayClick={false}
+      >
+        {clienteEditando && (
+          <ContactoForm
+            key={clienteEditando.id}
+            mode="edit"
+            initial={clienteEditando}
+            onSuccess={() => {
+              setClienteEditando(null);
+              listClientesFacturablesAction().then(setClientes);
+            }}
+            onCancel={() => setClienteEditando(null)}
+          />
+        )}
       </Modal>
     </div>
   );

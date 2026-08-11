@@ -446,6 +446,16 @@ export async function marcarCancelacion(
 }
 
 /**
+ * Solo actualiza el estatus de una cancelación ya solicitada (re-consulta al
+ * SAT, sin volver a pedir la cancelación) — a diferencia de `marcarCancelacion`,
+ * no toca motivo/folio de sustitución/acuse, esos ya quedaron grabados en la
+ * solicitud original. Ver `verificar-estatus-cancelacion.ts`.
+ */
+export async function actualizarEstatusCancelacion(idFactura: number, estatus: string): Promise<void> {
+  await db.update(factura).set({ estatusCancelacion: estatus }).where(eq(factura.id, idFactura));
+}
+
+/**
  * Correo ACTUAL del receptor (join en vivo a `contactos_facturacion`, no el
  * snapshot de la factura — el CFDI no imprime el correo, así que no hace
  * falta congelarlo; usar el más reciente es lo correcto para reenviar).

@@ -79,3 +79,17 @@ export async function getEmisorDetalle(idEmpresa: number, idCliente: number): Pr
     ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
   };
 }
+
+/** Ambiente de Finkok de una empresa (matriz o sucursal), sin exigir CSD/RFC completos — usado para el aviso de "modo de prueba" del módulo, que debe mostrarse aunque la empresa aún no pueda timbrar. */
+export async function getAmbienteTimbradoEmpresa(
+  idEmpresa: number,
+  idCliente: number,
+): Promise<"sandbox" | "produccion" | null> {
+  const [row] = await db
+    .select({ ambienteTimbrado: empresas.ambienteTimbrado })
+    .from(empresas)
+    .where(and(eq(empresas.id, idEmpresa), eq(empresas.idCliente, idCliente), esEmpresaPropia))
+    .limit(1);
+  if (!row) return null;
+  return row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox";
+}

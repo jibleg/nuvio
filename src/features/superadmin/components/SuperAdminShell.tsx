@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, ShieldCheck, Users } from "lucide-react";
+import { LayoutGrid, ShieldCheck, UserCog, Users } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { ROUTES } from "@/config/routes";
@@ -13,6 +13,7 @@ import type { SuperAdminUser } from "../types";
 const NAV = [
   { href: ROUTES.superadmin, label: "Resumen", icon: LayoutGrid, exact: true },
   { href: ROUTES.superadminClientes, label: "Clientes", icon: Users, exact: false },
+  { href: ROUTES.superadminStaff, label: "Staff", icon: UserCog, exact: false },
 ];
 
 /** Shell del panel interno: cabecera con marca + navegación + sesión de staff. */

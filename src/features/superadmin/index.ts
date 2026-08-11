@@ -8,6 +8,8 @@ export type {
   ClienteListItem,
   ClienteDetalle,
   SuperAdminStats,
+  StaffListItem,
+  StaffDetalle,
 } from "./types";
 export { requireSuperAdminSession } from "./guards";
 export { getCurrentSuperAdminSession } from "./use-cases/get-super-admin-session";
@@ -18,8 +20,15 @@ export {
   updateClienteAction,
   toggleClienteActivoAction,
   getClienteDetalleAction,
+  createStaffAction,
+  updateStaffAction,
+  resetStaffPasswordAction,
+  deleteStaffAction,
+  toggleStaffActivoAction,
+  getStaffDetalleAction,
 } from "./actions";
-export { getClientesList, getClienteById, getSuperAdminStats } from "./queries";
+export { getClientesList, getClienteById, getSuperAdminStats, getStaffList, getStaffById } from "./queries";
 export { SuperAdminLoginScreen } from "./components/SuperAdminLoginScreen";
 export { SuperAdminShell } from "./components/SuperAdminShell";
 export { ClientesAdmin } from "./components/ClientesAdmin";
+export { StaffAdmin } from "./components/StaffAdmin";

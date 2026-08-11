@@ -26,6 +26,7 @@ export const ROUTES = {
   superadminLogin: "/superadmin/login",
   superadmin: "/superadmin",
   superadminClientes: "/superadmin/clientes",
+  superadminStaff: "/superadmin/staff",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

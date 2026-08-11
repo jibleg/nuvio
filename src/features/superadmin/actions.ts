@@ -12,12 +12,18 @@ import {
 } from "@/lib/auth/superadmin-session-cookie";
 import { requireSuperAdminSession } from "./guards";
 import {
+  actualizarStaffSchema,
+  crearStaffSchema,
   onboardClienteSchema,
   resetAdminPasswordSchema,
+  resetStaffPasswordSchema,
   superAdminLoginSchema,
   updateClienteSchema,
+  type ActualizarStaffInput,
+  type CrearStaffInput,
   type OnboardClienteInput,
   type ResetAdminPasswordInput,
+  type ResetStaffPasswordInput,
   type SuperAdminLoginInput,
   type UpdateClienteInput,
 } from "./schemas";
@@ -27,9 +33,14 @@ import { onboardClienteUseCase } from "./use-cases/onboard-cliente";
 import { updateClienteUseCase } from "./use-cases/update-cliente";
 import { resetAdminPasswordUseCase } from "./use-cases/reset-admin-password";
 import { deleteClienteUseCase } from "./use-cases/delete-cliente";
-import { revocarSuperAdminSesion } from "./repositories/super-admins-repository";
+import { createStaffUseCase } from "./use-cases/create-staff";
+import { updateStaffUseCase } from "./use-cases/update-staff";
+import { resetStaffPasswordUseCase } from "./use-cases/reset-staff-password";
+import { deleteStaffUseCase } from "./use-cases/delete-staff";
+import { toggleStaffActivoUseCase } from "./use-cases/toggle-staff-activo";
+import { getSuperAdminDetalle, revocarSuperAdminSesion } from "./repositories/super-admins-repository";
 import { existsSlug, getClienteDetalle, setActivo, setAmbienteTimbrado } from "./repositories/clientes-repository";
-import type { ClienteDetalle } from "./types";
+import type { ClienteDetalle, StaffDetalle } from "./types";
 
 export type SuperAdminActionResult = { error: string };
 
@@ -149,4 +160,73 @@ export async function toggleClienteAmbienteTimbradoAction(
 
   await setAmbienteTimbrado(id, ambiente);
   revalidatePath(ROUTES.superadminClientes);
+}
+
+// ---- Staff (cuentas con acceso a /superadmin) ----
+
+/** Carga el detalle de una cuenta de staff para el formulario de edición (modal). */
+export async function getStaffDetalleAction(id: number): Promise<StaffDetalle | null> {
+  await requireSuperAdminSession();
+  return getSuperAdminDetalle(id);
+}
+
+export async function createStaffAction(input: CrearStaffInput): Promise<SuperAdminActionResult | void> {
+  await requireSuperAdminSession();
+
+  const parsed = crearStaffSchema.safeParse(input);
+  if (!parsed.success) return { error: "Revisa los datos del formulario." };
+
+  const result = await createStaffUseCase(parsed.data);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(ROUTES.superadminStaff);
+}
+
+export async function updateStaffAction(
+  id: number,
+  input: ActualizarStaffInput,
+): Promise<SuperAdminActionResult | void> {
+  const { superAdmin } = await requireSuperAdminSession();
+
+  const parsed = actualizarStaffSchema.safeParse(input);
+  if (!parsed.success) return { error: "Revisa los datos del formulario." };
+
+  const result = await updateStaffUseCase(id, parsed.data, superAdmin.id);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(ROUTES.superadminStaff);
+}
+
+export async function resetStaffPasswordAction(
+  id: number,
+  input: ResetStaffPasswordInput,
+): Promise<SuperAdminActionResult | void> {
+  await requireSuperAdminSession();
+
+  const parsed = resetStaffPasswordSchema.safeParse(input);
+  if (!parsed.success) return { error: "Mínimo 6 caracteres." };
+
+  const result = await resetStaffPasswordUseCase(id, parsed.data.password);
+  if (!result.ok) return { error: result.error };
+}
+
+export async function deleteStaffAction(id: number): Promise<SuperAdminActionResult | void> {
+  const { superAdmin } = await requireSuperAdminSession();
+
+  const result = await deleteStaffUseCase(id, superAdmin.id);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(ROUTES.superadminStaff);
+}
+
+export async function toggleStaffActivoAction(
+  id: number,
+  activo: boolean,
+): Promise<SuperAdminActionResult | void> {
+  const { superAdmin } = await requireSuperAdminSession();
+
+  const result = await toggleStaffActivoUseCase(id, activo, superAdmin.id);
+  if (!result.ok) return { error: result.error };
+
+  revalidatePath(ROUTES.superadminStaff);
 }

@@ -74,3 +74,26 @@ export type SuperAdminStats = {
   empresasTotal: number;
   usuariosTotal: number;
 };
+
+/** Cuenta de staff de Nuvio con acceso a `/superadmin` (tabla `corporativo.super_admins`). */
+export type StaffListItem = {
+  id: number;
+  email: string;
+  nombre: string;
+  activo: boolean;
+  fechaAlta: Date;
+};
+
+export type StaffDetalle = StaffListItem;
+
+export type CrearStaffData = {
+  nombre: string;
+  email: string;
+  password: string;
+};
+
+export type ActualizarStaffData = {
+  nombre: string;
+  email: string;
+  activo: boolean;
+};

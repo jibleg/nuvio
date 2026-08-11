@@ -102,3 +102,27 @@ export const resetAdminPasswordSchema = z.object({
   password: z.string().min(6, "Mínimo 6 caracteres"),
 });
 export type ResetAdminPasswordInput = z.input<typeof resetAdminPasswordSchema>;
+
+const passwordField = z
+  .string()
+  .min(1, "La contraseña es obligatoria")
+  .min(6, "Mínimo 6 caracteres");
+
+export const crearStaffSchema = z.object({
+  nombre: z.string().trim().min(1, "Requerido"),
+  email: emailField,
+  password: passwordField,
+});
+export type CrearStaffInput = z.input<typeof crearStaffSchema>;
+
+export const actualizarStaffSchema = z.object({
+  nombre: z.string().trim().min(1, "Requerido"),
+  email: emailField,
+  activo: z.boolean(),
+});
+export type ActualizarStaffInput = z.input<typeof actualizarStaffSchema>;
+
+export const resetStaffPasswordSchema = z.object({
+  password: passwordField,
+});
+export type ResetStaffPasswordInput = z.input<typeof resetStaffPasswordSchema>;

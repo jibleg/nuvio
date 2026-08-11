@@ -8,8 +8,8 @@ import { sucursalFormSchema, updateSucursalSchema, type SucursalFormInput, type 
 import { getSucursalById } from "./queries";
 import { createSucursalUseCase } from "./use-cases/create-sucursal";
 import { updateSucursalUseCase } from "./use-cases/update-sucursal";
-import { getLogoMeta, setActivo, setLogo } from "./repositories/sucursales-repository";
-import type { LogoDetalle, LogoMutationResult, SucursalDetalle } from "./types";
+import { getLogoMeta, setActivo, setAmbienteTimbrado, setLogo } from "./repositories/sucursales-repository";
+import type { AmbienteFacturacion, LogoDetalle, LogoMutationResult, SucursalDetalle } from "./types";
 
 const VIEW = "empresas.acceso";
 const MANAGE = "empresas.write";
@@ -66,6 +66,29 @@ export async function setSucursalActivoAction(
   const session = await requirePermission(MANAGE);
 
   await setActivo(id, session.cliente.id, activo);
+  revalidatePath(ROUTES.sucursales);
+}
+
+/**
+ * Cambia el ambiente de facturación de una sucursal (o la matriz). El gate de
+ * cuenta ("solo Nuvio pasa a producción") sigue vivo: una empresa solo puede
+ * pasar a 'produccion' si el cliente ya está aprobado, sin importar qué tan
+ * bien haya validado sus pruebas en 'sandbox'.
+ */
+export async function setSucursalAmbienteFacturacionAction(
+  id: number,
+  ambiente: AmbienteFacturacion,
+): Promise<SucursalActionResult | void> {
+  const session = await requirePermission(MANAGE);
+
+  if (ambiente === "produccion" && session.cliente.ambienteTimbrado !== "produccion") {
+    return {
+      error:
+        "Tu cuenta aún no está aprobada por Nuvio para facturar en producción. Contáctanos para activarla antes de usar este modo en una sucursal.",
+    };
+  }
+
+  await setAmbienteTimbrado(id, session.cliente.id, ambiente);
   revalidatePath(ROUTES.sucursales);
 }
 

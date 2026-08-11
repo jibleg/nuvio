@@ -7,7 +7,7 @@ import { leerLlavePrivada, sellar } from "@/lib/cfdi/sello";
 import { datosTimbre } from "@/lib/cfdi/tfd";
 import { OBJETO_IMP_NO, OBJETO_IMP_SI } from "@/lib/cfdi/types";
 import type { ComprobanteCfdi, ConceptoCfdi } from "@/lib/cfdi/types";
-import { conSello, construirXml, SELLO_VACIO } from "@/lib/cfdi/xml";
+import { conSello, construirXml, DEC_IMPORTE_CONCEPTO, numero, SELLO_VACIO } from "@/lib/cfdi/xml";
 import { credencialesFinkok, type AmbienteTimbrado } from "@/lib/finkok/credenciales";
 import { timbrarConFinkok } from "@/lib/finkok/stamp";
 import { getEmisorDetalle } from "../repositories/emisor-repository";
@@ -34,11 +34,17 @@ const DECIMALES = 2;
  * XML sellado sigue en `xml_response` porque el paso 2 falló de forma
  * ambigua), se reutiliza tal cual — nunca se reconstruye con un folio nuevo,
  * para no arriesgar un doble timbrado.
+ *
+ * El ambiente lo decide la empresa EMISORA (toggle por sucursal, ver
+ * `@/features/sucursales`), no el cliente — pero solo puede timbrar en
+ * 'produccion' si la cuenta ya está aprobada por Nuvio (`ambienteCuenta`):
+ * si una sucursal quedó en 'produccion' pero la cuenta ya no está aprobada,
+ * se degrada a 'sandbox' en vez de gastar un timbre real sin autorización.
  */
 export async function timbrarFacturaUseCase(
   idFactura: number,
   idCliente: number,
-  ambiente: AmbienteTimbrado,
+  ambienteCuenta: AmbienteTimbrado,
 ): Promise<TimbrarResult> {
   const facturaDetalle = await getFacturaDetalle(idFactura, idCliente);
   if (!facturaDetalle) return { ok: false, error: "Factura no encontrada.", puedeReintentar: false };
@@ -63,6 +69,8 @@ export async function timbrarFacturaUseCase(
     return { ok: false, error: "Falta el código postal de la empresa emisora.", puedeReintentar: false };
   }
   const cpEmisor = emisor.codigoPostal;
+  const ambiente: AmbienteTimbrado =
+    emisor.ambienteTimbrado === "produccion" && ambienteCuenta === "produccion" ? "produccion" : "sandbox";
 
   const receptor = await getContactoById(facturaDetalle.idContactoFacturacion, idCliente);
   if (!receptor) return { ok: false, error: "No se pudo resolver el cliente receptor.", puedeReintentar: false };
@@ -113,7 +121,13 @@ export async function timbrarFacturaUseCase(
           impuesto: CLAVE_IMPUESTO_IVA,
           tipoFactor: CLAVE_FACTOR_TASA,
           tasaOCuota: TASA_IVA,
-          importe: Math.round(c.importe * TASA_IVA * 100) / 100,
+          // A la precisión con la que `xml.ts` ESCRIBE Base/Importe del
+          // concepto (4 decimales), no a centavo: redondear a 2 aquí desvía
+          // el importe hasta 0.005 de `Base × TasaOCuota`, muy por fuera de
+          // la tolerancia ±0.0001 que valida el SAT — "El valor del campo
+          // .../Traslado@Importe... no se encuentra entre el límite inferior
+          // y superior permitido" (visto en producción, factura 613).
+          importe: Number(numero(c.importe * TASA_IVA, DEC_IMPORTE_CONCEPTO)),
         }
       : null,
   }));

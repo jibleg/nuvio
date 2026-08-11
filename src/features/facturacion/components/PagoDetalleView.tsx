@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, AlertTriangle, Ban, CheckCircle2, Download, FileCode2, Loader2, Trash2, Zap } from "lucide-react";
+import { AlertCircle, AlertTriangle, Ban, CheckCircle2, FileCode2, Loader2, Trash2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -10,6 +10,7 @@ import { ROUTES } from "@/config/routes";
 import { eliminarBorradorPagoAction, timbrarPagoAction } from "../actions";
 import type { PagoDetalle } from "../types";
 import { CancelarPagoModal } from "./CancelarPagoModal";
+import { PdfPreviewPanel, PdfToggleButton } from "./PdfViewer";
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -20,6 +21,8 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
   const [timbrando, setTimbrando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [verPdf, setVerPdf] = useState(false);
+  const pdfSrc = `${ROUTES.facturacion}/pagos/${pago.id}/pdf`;
 
   if (pago.estado === "borrador") {
     return (
@@ -52,8 +55,13 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
             </p>
           )}
 
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Vista previa PDF" />
+          </div>
+          {verPdf && <div className="mt-4"><PdfPreviewPanel src={pdfSrc} /></div>}
+
           {puedeGestionar && (
-            <div className="mt-5 flex flex-wrap items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 disabled={timbrando}
@@ -161,15 +169,7 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <a
-            href={`${ROUTES.facturacion}/pagos/${pago.id}/pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
-          >
-            <Download className="h-4 w-4" />
-            Ver / imprimir PDF
-          </a>
+          <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Ver PDF" variant="primary" />
           <a
             href={`${ROUTES.facturacion}/pagos/${pago.id}/xml`}
             className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:text-brand-300"
@@ -189,6 +189,8 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
           )}
         </div>
       </Card>
+
+      {verPdf && <PdfPreviewPanel src={pdfSrc} />}
 
       <Card title="Facturas liquidadas" bodyClassName="p-5">
         <div className="overflow-hidden rounded-2xl border border-line">

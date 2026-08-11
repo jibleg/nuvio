@@ -25,6 +25,7 @@ export default async function SucursalesPage() {
         sucursales={sucursales}
         plan={session.cliente.plan}
         puedeGestionar={puedeGestionar}
+        ambienteCuenta={session.cliente.ambienteTimbrado}
       />
     </div>
   );

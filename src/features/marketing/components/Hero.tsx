@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/Button";
 import { HeroVisual } from "./HeroVisual";
 import { easeOutSoft, stagger, fadeUp } from "@/lib/motion";
 
-export function Hero() {
+type HeroProps = {
+  isTenant?: boolean;
+};
+
+export function Hero({ isTenant = false }: HeroProps) {
   return (
     <section id="top" className="relative overflow-hidden pb-16 pt-28 sm:pt-32 lg:pb-24 lg:pt-36">
       {/* Backgrounds */}
@@ -77,9 +81,11 @@ export function Hero() {
           </motion.p>
 
           <motion.div variants={fadeUp} className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button href="#cta" variant="primary" withArrow>
-              Comenzar gratis
-            </Button>
+            {!isTenant && (
+              <Button href="#cta" variant="primary" withArrow>
+                Comenzar gratis
+              </Button>
+            )}
             <Button href="#modulos" variant="secondary">
               Solicitar una demostración
             </Button>

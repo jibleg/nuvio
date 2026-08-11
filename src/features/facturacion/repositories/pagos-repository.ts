@@ -14,7 +14,7 @@ import {
   type PagoDocumentoDetalle,
   type PagoListItem,
 } from "../types";
-import { TIPO_COMPROBANTE_INGRESO, toEstado } from "./facturas-repository";
+import { TIPO_COMPROBANTE_INGRESO, toAmbiente, toEstado } from "./facturas-repository";
 
 /** Sentinela `N` (-1) del esquema heredado: usado en columnas NOT NULL de la cabecera que no aplican a un comprobante tipo Pago. */
 const NA = -1;
@@ -417,6 +417,7 @@ export async function getPagoDetalle(id: number, idCliente: number): Promise<Pag
       numeroOperacion: pago.numeroOperacion,
       fechaPago: pago.fechaPago,
       monto: pago.montoPagado,
+      ambienteTimbrado: factura.ambienteTimbrado,
     })
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
@@ -470,6 +471,7 @@ export async function getPagoDetalle(id: number, idCliente: number): Promise<Pag
     idFormaPago: row.idFormaPago,
     numeroOperacion: row.numeroOperacion,
     documentosDetalle,
+    ambienteTimbrado: toAmbiente(row.ambienteTimbrado),
   };
 }
 

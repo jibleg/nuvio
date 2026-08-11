@@ -24,6 +24,7 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.83.0",
+    "react-toastify": "^11.1.0",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "xslt-processor": "^5.0.12",

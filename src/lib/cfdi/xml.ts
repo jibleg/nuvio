@@ -31,7 +31,14 @@ import {
  * decimales el redondeo de Base ya la revienta. Por eso NO son elegibles.
  */
 const DEC_COMPROBANTE = 2;
-const DEC_IMPORTE_CONCEPTO = 4;
+/**
+ * Exportado: `timbrar-factura.ts` tiene que calcular el `Traslado@Importe` de
+ * cada concepto con esta misma precisión (no a 2 decimales) — si redondea a
+ * centavo antes de que llegue aquí, el valor ya no cae dentro de la
+ * tolerancia ±0.0001 contra `Base × TasaOCuota` que exige el SAT y este
+ * módulo solo lo escribe, no lo corrige.
+ */
+export const DEC_IMPORTE_CONCEPTO = 4;
 const DEC_TASA = 6;
 
 /** Espacios de nombres y ubicación del esquema, idénticos a los reales. */

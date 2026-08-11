@@ -64,6 +64,15 @@ export const empresas = corporativo.table("empresas", {
   logo: bytea("logo"),
   logoMime: varchar("logo_mime", { length: 50 }),
   logoNombre: varchar("logo_nombre", { length: 120 }),
+  /**
+   * Ambiente de Finkok para timbrar A NOMBRE DE ESTA empresa: 'sandbox'
+   * (pruebas, sin validez fiscal) o 'produccion' (SAT real). Nace en
+   * 'sandbox'; el dueño del tenant la pasa a 'produccion' sucursal por
+   * sucursal una vez que valida su configuración — pero solo si
+   * `clientes.ambiente_timbrado` ya está en 'produccion' (gate de cuenta que
+   * sigue decidiendo solo Nuvio, ver `@/lib/finkok/credenciales`).
+   */
+  ambienteTimbrado: varchar("ambiente_timbrado", { length: 10 }).notNull().default("sandbox"),
 });
 
 /** Folio consecutivo por empresa (contador transaccional, ver `empresa-folios-repository.ts`). */

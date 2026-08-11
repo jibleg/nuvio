@@ -14,10 +14,13 @@ export function SucursalesAdmin({
   sucursales,
   plan: planKey,
   puedeGestionar,
+  ambienteCuenta,
 }: {
   sucursales: SucursalListItem[];
   plan: PlanKey;
   puedeGestionar: boolean;
+  /** Ambiente de Finkok aprobado por Nuvio para la cuenta — gate del toggle de ambiente por sucursal. */
+  ambienteCuenta: "sandbox" | "produccion";
 }) {
   const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -200,6 +203,7 @@ export function SucursalesAdmin({
           key={modo === "edit" ? `edit-${editando?.id}` : "create"}
           mode={modo}
           initial={editando ?? undefined}
+          ambienteCuenta={ambienteCuenta}
           onSuccess={alGuardar}
           onCancel={() => setModalAbierto(false)}
         />

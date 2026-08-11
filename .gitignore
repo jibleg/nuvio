@@ -29,3 +29,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# referencias locales con datos fiscales reales de terceros
+/assets/demo-factura.pdf

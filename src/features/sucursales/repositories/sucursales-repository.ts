@@ -2,7 +2,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { empresas } from "@/lib/db/schema";
-import type { SucursalDetalle, SucursalFormData, SucursalListItem, UpdateSucursalData } from "../types";
+import type { AmbienteFacturacion, SucursalDetalle, SucursalFormData, SucursalListItem, UpdateSucursalData } from "../types";
 
 const listColumns = {
   id: empresas.id,
@@ -92,6 +92,7 @@ export async function getSucursalDetalle(
       ...listColumns,
       razonSocial: empresas.razonSocial,
       idRegimen: empresas.idRegimen,
+      ambienteTimbrado: empresas.ambienteTimbrado,
       matrizRfc: matrizAlias.rfc,
       matrizRazonSocial: matrizAlias.razonSocial,
       matrizIdRegimen: matrizAlias.idRegimen,
@@ -109,7 +110,20 @@ export async function getSucursalDetalle(
     rfcEfectivo: row.rfc ?? row.matrizRfc,
     razonSocialEfectiva: row.razonSocial ?? row.matrizRazonSocial,
     idRegimenEfectivo: row.idRegimen ?? row.matrizIdRegimen,
+    ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
   };
+}
+
+/** Cambia el ambiente de Finkok con el que factura esta empresa (matriz o sucursal); el gate de cuenta se valida en la acción. */
+export async function setAmbienteTimbrado(
+  id: number,
+  idCliente: number,
+  ambiente: AmbienteFacturacion,
+): Promise<void> {
+  await db
+    .update(empresas)
+    .set({ ambienteTimbrado: ambiente })
+    .where(and(eq(empresas.id, id), eq(empresas.idCliente, idCliente), esEmpresaPropia));
 }
 
 /** Total de empresas (matriz + sucursales) del cliente, para el tope del plan. */

@@ -18,14 +18,31 @@ function formatearFecha(iso: string): string {
  * Certificado de Sello Digital (CSD) de una empresa/sucursal, necesario para
  * timbrar CFDI a su nombre. Se sube aparte de los datos fiscales: cambiar de
  * CSD (vencimiento, renovación) no debe obligar a re-capturar razón social/RFC.
+ *
+ * No usa `<form>` propio: este componente vive dentro del `<form>` de
+ * SucursalForm, y un `<form>` anidado es HTML inválido — el parser del
+ * navegador cierra el formulario exterior en cuanto encuentra el `</form>`
+ * interno, dejando "Guardar cambios" fuera del formulario real. La subida se
+ * dispara a mano leyendo los inputs por ref.
  */
-export function CsdUploader({ idEmpresa, rfcEmpresa }: { idEmpresa: number; rfcEmpresa: string }) {
+export function CsdUploader({
+  idEmpresa,
+  rfcEmpresa,
+  onDirtyChange,
+}: {
+  idEmpresa: number;
+  rfcEmpresa: string;
+  /** Avisa al formulario padre si hay archivos elegidos que aún no se han subido, para bloquear su guardado. */
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const [detalle, setDetalle] = useState<CsdDetalle | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const formRef = useRef<HTMLFormElement>(null);
+  const cerRef = useRef<HTMLInputElement>(null);
+  const keyRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let vivo = true;
@@ -41,9 +58,37 @@ export function CsdUploader({ idEmpresa, rfcEmpresa }: { idEmpresa: number; rfcE
     };
   }, [idEmpresa]);
 
-  const onSubmit = (formData: FormData) => {
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
+
+  const notificarSeleccion = () => {
+    const hayArchivos = !!(cerRef.current?.files?.length || keyRef.current?.files?.length);
+    onDirtyChange?.(hayArchivos);
+  };
+
+  const limpiarSeleccion = () => {
+    if (cerRef.current) cerRef.current.value = "";
+    if (keyRef.current) keyRef.current.value = "";
+    if (passwordRef.current) passwordRef.current.value = "";
+    onDirtyChange?.(false);
+  };
+
+  const onSubir = () => {
     setError(null);
     setExito(false);
+
+    const cer = cerRef.current?.files?.[0];
+    const key = keyRef.current?.files?.[0];
+    const password = passwordRef.current?.value ?? "";
+    if (!cer || !key || !password) {
+      setError("Adjunta el certificado (.cer), la llave (.key) y captura la contraseña de la llave.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("cer", cer);
+    formData.set("key", key);
+    formData.set("password", password);
+
     startTransition(async () => {
       const result = await subirCsdAction(idEmpresa, rfcEmpresa, formData);
       if (!result.ok) {
@@ -51,7 +96,7 @@ export function CsdUploader({ idEmpresa, rfcEmpresa }: { idEmpresa: number; rfcE
         return;
       }
       setExito(true);
-      formRef.current?.reset();
+      limpiarSeleccion();
       const actualizado = await getCsdDetalleAction(idEmpresa);
       setDetalle(actualizado);
     });
@@ -82,18 +127,32 @@ export function CsdUploader({ idEmpresa, rfcEmpresa }: { idEmpresa: number; rfcE
           <p className="text-sm text-muted">Esta empresa aún no tiene un CSD cargado.</p>
         )}
 
-        <form ref={formRef} action={onSubmit} className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <span className={labelClass}>Certificado (.cer)</span>
-            <input className={inputClass} type="file" name="cer" accept=".cer" required />
+            <input
+              className={inputClass}
+              type="file"
+              accept=".cer"
+              ref={cerRef}
+              disabled={isPending}
+              onChange={notificarSeleccion}
+            />
           </div>
           <div>
             <span className={labelClass}>Llave privada (.key)</span>
-            <input className={inputClass} type="file" name="key" accept=".key" required />
+            <input
+              className={inputClass}
+              type="file"
+              accept=".key"
+              ref={keyRef}
+              disabled={isPending}
+              onChange={notificarSeleccion}
+            />
           </div>
           <div>
             <span className={labelClass}>Contraseña de la llave</span>
-            <input className={inputClass} type="password" name="password" required />
+            <input className={inputClass} type="password" ref={passwordRef} disabled={isPending} />
           </div>
 
           {error && (
@@ -108,15 +167,16 @@ export function CsdUploader({ idEmpresa, rfcEmpresa }: { idEmpresa: number; rfcE
 
           <div className="sm:col-span-3">
             <button
-              type="submit"
+              type="button"
+              onClick={onSubir}
               disabled={isPending}
               className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 disabled:opacity-70 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
             >
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {detalle?.tieneCsd ? "Reemplazar certificado" : "Subir certificado"}
+              {isPending ? "Subiendo certificado…" : detalle?.tieneCsd ? "Reemplazar certificado" : "Subir certificado"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

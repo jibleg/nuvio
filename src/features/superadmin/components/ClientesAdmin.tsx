@@ -22,6 +22,7 @@ import { resolveModulos } from "@/config/modules";
 import { getPlan } from "@/config/plans";
 import { ModuleIcon } from "@/features/modulos/components/module-icons";
 import { ClienteActivoToggle } from "./ClienteActivoToggle";
+import { ClienteAmbienteToggle } from "./ClienteAmbienteToggle";
 import { ClienteForm } from "./ClienteForm";
 import { deleteClienteAction, getClienteDetalleAction } from "../actions";
 import type { ClienteDetalle, ClienteListItem } from "../types";
@@ -126,6 +127,7 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                   <th className="px-5 py-3">Usuarios</th>
                   <th className="px-5 py-3">Alta</th>
                   <th className="px-5 py-3">Estado</th>
+                  <th className="px-5 py-3">Facturación</th>
                   <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
@@ -162,6 +164,9 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                     <td className="px-5 py-3.5">
                       <ClienteActivoToggle id={cliente.id} activo={cliente.activo} />
                     </td>
+                    <td className="px-5 py-3.5">
+                      <ClienteAmbienteToggle id={cliente.id} ambiente={cliente.ambienteTimbrado} />
+                    </td>
                     <td className="px-5 py-3.5 text-right">
                       <ClienteAccionesMenu
                         cargando={cargandoId === cliente.id}
@@ -191,6 +196,7 @@ export function ClientesAdmin({ clientes }: { clientes: ClienteListItem[] }) {
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <PlanBadge plan={cliente.plan} />
+                  <ClienteAmbienteToggle id={cliente.id} ambiente={cliente.ambienteTimbrado} />
                 </div>
                 <div className="mt-3">
                   <ModulosChips moduloKeys={cliente.moduloKeys} />

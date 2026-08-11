@@ -154,7 +154,7 @@ export async function cancelarFacturaAction(
 ): Promise<CancelarResult> {
   const session = await requirePermission(MANAGE);
 
-  const result = await cancelarFacturaUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado, motivo, folioSustitucion);
+  const result = await cancelarFacturaUseCase(id, session.cliente.id, motivo, folioSustitucion);
   if (result.ok) revalidarFacturacion();
   return result;
 }
@@ -165,9 +165,9 @@ export async function getEmailReceptorAction(idFactura: number): Promise<string 
   return getEmailReceptorActual(idFactura, session.cliente.id);
 }
 
-export async function enviarFacturaCorreoAction(id: number, correo: string): Promise<EnviarCorreoResult> {
+export async function enviarFacturaCorreoAction(id: number, correos: string[]): Promise<EnviarCorreoResult> {
   const session = await requirePermission(MANAGE);
-  return enviarFacturaCorreoUseCase(id, session.cliente.id, correo);
+  return enviarFacturaCorreoUseCase(id, session.cliente.id, session.cliente.slug, correos);
 }
 
 export async function getSaldoPendienteAction(idFactura: number): Promise<number | null> {
@@ -229,7 +229,7 @@ export async function timbrarPagoAction(id: number): Promise<FacturaActionResult
 
 export async function cancelarPagoAction(id: number, motivo: CodigoMotivo): Promise<CancelarResult> {
   const session = await requirePermission(MANAGE);
-  const result = await cancelarPagoUseCase(id, session.cliente.id, session.cliente.ambienteTimbrado, motivo);
+  const result = await cancelarPagoUseCase(id, session.cliente.id, motivo);
   if (result.ok) {
     revalidatePath(`${ROUTES.facturacion}/pagos`);
     revalidarFacturacion();

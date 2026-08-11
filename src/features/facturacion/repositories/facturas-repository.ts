@@ -25,6 +25,17 @@ export function toEstado(tipoFactura: number | null, estatusCancelacion: string 
   return tipoFactura === 1 ? "timbrada" : "borrador";
 }
 
+/**
+ * `factura.ambiente_timbrado` guarda "PROD"/"TEST" (ver `marcarTimbrada`); un
+ * borrador aún sin timbrar, o una fila histórica de antes de este campo, la
+ * trae en NULL. Compartido con `pagos-repository`.
+ */
+export function toAmbiente(ambienteTimbrado: string | null): "sandbox" | "produccion" | null {
+  if (ambienteTimbrado === "PROD") return "produccion";
+  if (ambienteTimbrado === "TEST") return "sandbox";
+  return null;
+}
+
 const listSelect = {
   id: factura.id,
   tipoFactura: factura.tipoFactura,
@@ -84,6 +95,11 @@ export async function getFacturaDetalle(id: number, idCliente: number): Promise<
       observacion: factura.observacion,
       cfdiRelacionado: factura.cfdiRelacionado,
       tipoRelacion: factura.tipoRelacion,
+      ambienteTimbrado: factura.ambienteTimbrado,
+      idRegimenEmisor: factura.idRegimenEmisor,
+      idRegimenReceptor: factura.idRegimen,
+      cpExpedicion: factura.cpExpedicion,
+      codigoPostalReceptor: factura.codigoPostal,
     })
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
@@ -136,8 +152,13 @@ export async function getFacturaDetalle(id: number, idCliente: number): Promise<
     idMetodo: row.idMetodo,
     idMoneda: row.idMoneda,
     observacion: row.observacion,
+    idRegimenEmisor: row.idRegimenEmisor,
+    idRegimenReceptor: row.idRegimenReceptor,
+    cpExpedicion: row.cpExpedicion,
+    codigoPostalReceptor: row.codigoPostalReceptor,
     cfdiRelacionado: row.cfdiRelacionado,
     tipoRelacion: row.tipoRelacion,
+    ambienteTimbrado: toAmbiente(row.ambienteTimbrado),
     conceptos: conceptoRows.map((c) => ({
       idServicio: c.idServicio,
       claveProdServ: c.claveProdServ ?? "",

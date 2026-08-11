@@ -16,14 +16,18 @@ import {
   ScrollProgress,
   BackToTop,
 } from "@/features/marketing";
+import { getCurrentTenant } from "@/features/tenant";
 
-export default function Home() {
+export default async function Home() {
+  const tenant = await getCurrentTenant();
+  const isTenant = tenant !== null;
+
   return (
     <>
       <ScrollProgress />
-      <Nav />
+      <Nav isTenant={isTenant} />
       <main>
-        <Hero />
+        <Hero isTenant={isTenant} />
         <ValuesStrip />
         <Story />
         <Modules />
@@ -32,7 +36,7 @@ export default function Home() {
         <Roadmap />
         <ForPeople />
         <Testimonial />
-        <Plans />
+        <Plans isTenant={isTenant} />
         <Manifesto />
         <FinalCTA />
       </main>

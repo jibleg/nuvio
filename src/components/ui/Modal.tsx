@@ -25,6 +25,7 @@ export function Modal({
   description,
   size = "lg",
   closeOnOverlayClick = true,
+  hero,
   children,
 }: {
   open: boolean;
@@ -34,6 +35,8 @@ export function Modal({
   size?: ModalSize;
   /** Si es false, el clic en el fondo no cierra el modal (Escape y el botón X siguen funcionando). */
   closeOnOverlayClick?: boolean;
+  /** Reemplaza el header plano por contenido a medida (p. ej. un hero de color) — `title` se sigue usando para `aria-label`. El botón de cerrar se dibuja encima, listo para fondos oscuros. */
+  hero?: ReactNode;
   children: ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -74,22 +77,36 @@ export function Modal({
             transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             className={`flex max-h-[92dvh] w-full ${SIZES[size]} flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-glow sm:rounded-3xl`}
           >
-            <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
-              <div className="min-w-0">
-                <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
-                {description && (
-                  <p className="mt-0.5 text-sm text-muted">{description}</p>
-                )}
+            {hero ? (
+              <div className="relative shrink-0">
+                {hero}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Cerrar"
+                  className="absolute right-4 top-4 grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/80 transition-colors hover:bg-white/15 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Cerrar"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-cloud hover:text-ink"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </header>
+            ) : (
+              <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+                <div className="min-w-0">
+                  <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
+                  {description && (
+                    <p className="mt-0.5 text-sm text-muted">{description}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Cerrar"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-cloud hover:text-ink"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </header>
+            )}
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
           </motion.div>
         </motion.div>

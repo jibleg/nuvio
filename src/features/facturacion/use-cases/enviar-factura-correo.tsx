@@ -1,16 +1,26 @@
-import { enviarCorreo, type EnviarCorreoResult } from "@/lib/email/sparkpost";
+import { enviarCorreo, remitenteTenant, type EnviarCorreoResult } from "@/lib/email/sparkpost";
 import { armarPdfFactura } from "../pdf/armar-pdf-factura";
 import { getFacturaDetalle, getXmlTimbrado } from "../repositories/facturas-repository";
+import { plantillaCorreoFactura } from "./plantilla-correo-factura";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Arma el mismo PDF de la descarga y lo manda por correo — nunca automático, siempre a petición del operador. */
+/**
+ * Arma el mismo PDF de la descarga y lo manda por correo — nunca automático,
+ * siempre a petición del operador. El remitente es el propio del tenant
+ * (`{slug}.nuvio@...`, ver `remitenteTenant`), con "{emisor} · Envío de
+ * factura" como nombre visible y el mismo texto en el asunto — el receptor
+ * ve que le llega de su proveedor y de qué se trata, sin que el folio fiscal
+ * (un UUID largo, poco legible) sea lo primero que muestra el cliente de correo.
+ */
 export async function enviarFacturaCorreoUseCase(
   idFactura: number,
   idCliente: number,
-  correoDestino: string,
+  slugCliente: string,
+  correosDestino: string[],
 ): Promise<EnviarCorreoResult> {
-  if (!EMAIL_REGEX.test(correoDestino)) return { ok: false, error: "Correo inválido." };
+  if (correosDestino.length === 0) return { ok: false, error: "Captura al menos un correo." };
+  if (!correosDestino.every((c) => EMAIL_REGEX.test(c))) return { ok: false, error: "Hay un correo inválido." };
 
   const factura = await getFacturaDetalle(idFactura, idCliente);
   if (!factura) return { ok: false, error: "Factura no encontrada." };
@@ -22,15 +32,18 @@ export async function enviarFacturaCorreoUseCase(
   const pdfBuffer = await armarPdfFactura(factura, idCliente);
   const nombreArchivo = `factura-${factura.folioFiscal ?? factura.id}`;
 
-  const html = `
-    <p>Hola${factura.receptorNombre ? ` ${factura.receptorNombre}` : ""},</p>
-    <p>Adjuntamos tu factura${factura.folioFiscal ? ` con folio fiscal <strong>${factura.folioFiscal}</strong>` : ""}.</p>
-    <p>Este es un correo automático, por favor no respondas a esta dirección.</p>
-  `.trim();
+  const html = plantillaCorreoFactura({
+    receptorNombre: factura.receptorNombre,
+    emisorNombre: factura.emisorNombre,
+    folioFiscal: factura.folioFiscal,
+  });
+
+  const nombreEmisor = factura.emisorNombre ?? "Tu proveedor";
 
   return enviarCorreo({
-    para: { email: correoDestino, nombre: factura.receptorNombre ?? undefined },
-    asunto: `Factura ${factura.folioFiscal ?? `#${factura.id}`}`,
+    remitente: remitenteTenant(slugCliente, `${nombreEmisor} · Envío de factura`) ?? undefined,
+    para: correosDestino.map((email) => ({ email, nombre: factura.receptorNombre ?? undefined })),
+    asunto: `${nombreEmisor} te envía una factura`,
     html,
     adjuntos: [
       { nombre: `${nombreArchivo}.pdf`, tipoMime: "application/pdf", contenidoBase64: pdfBuffer.toString("base64") },

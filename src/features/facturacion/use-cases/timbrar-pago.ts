@@ -21,11 +21,14 @@ import type { TimbrarResult } from "../types";
  * al PAC, reutiliza el XML sellado si un intento previo falló de forma
  * ambigua); solo cambia cómo se arma el comprobante — sin conceptos reales,
  * con el nodo `pago20:Pagos` en vez de `Conceptos` con precio.
+ *
+ * El ambiente lo decide la empresa emisora, degradado a 'sandbox' si la
+ * cuenta no está aprobada por Nuvio para producción (ver `timbrar-factura.ts`).
  */
 export async function timbrarPagoUseCase(
   idPago: number,
   idCliente: number,
-  ambiente: AmbienteTimbrado,
+  ambienteCuenta: AmbienteTimbrado,
 ): Promise<TimbrarResult> {
   const datos = await getDatosParaTimbrarPago(idPago, idCliente);
   if (!datos) return { ok: false, error: "Complemento de pago no encontrado.", puedeReintentar: false };
@@ -48,6 +51,8 @@ export async function timbrarPagoUseCase(
   if (!emisor.codigoPostal) {
     return { ok: false, error: "Falta el código postal de la empresa emisora.", puedeReintentar: false };
   }
+  const ambiente: AmbienteTimbrado =
+    emisor.ambienteTimbrado === "produccion" && ambienteCuenta === "produccion" ? "produccion" : "sandbox";
 
   const receptor = await getContactoById(datos.idContactoFacturacion, idCliente);
   if (!receptor) return { ok: false, error: "No se pudo resolver el cliente receptor.", puedeReintentar: false };

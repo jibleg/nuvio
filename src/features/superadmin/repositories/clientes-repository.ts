@@ -30,6 +30,7 @@ export async function listClientes(): Promise<ClienteListItem[]> {
         activo: clientes.activo,
         plan: clientes.plan,
         fechaAlta: clientes.fechaAlta,
+        ambienteTimbrado: clientes.ambienteTimbrado,
       })
       .from(clientes)
       .orderBy(clientes.fechaAlta),
@@ -76,6 +77,7 @@ export async function listClientes(): Promise<ClienteListItem[]> {
     empresasCount: empresasPorCliente.get(row.id) ?? 0,
     usuariosCount: usuariosPorCliente.get(row.id) ?? 0,
     moduloKeys: modulosPorCliente.get(row.id) ?? [],
+    ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
   }));
 }
 
@@ -89,6 +91,7 @@ export async function getClienteDetalle(
       nombre: clientes.nombre,
       activo: clientes.activo,
       plan: clientes.plan,
+      ambienteTimbrado: clientes.ambienteTimbrado,
     })
     .from(clientes)
     .where(eq(clientes.id, id))
@@ -117,6 +120,7 @@ export async function getClienteDetalle(
     empresasCount: empresaCountRows[0]?.total ?? 0,
     moduloKeys: moduloRows.map((r) => r.key),
     adminUsuario,
+    ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
   };
 }
 
@@ -236,6 +240,11 @@ export async function setActivo(id: number, activo: boolean): Promise<void> {
     .update(clientes)
     .set({ activo: activo ? 1 : 0 })
     .where(eq(clientes.id, id));
+}
+
+/** El gate de Finkok de la cuenta: aprobarlo a 'produccion' habilita que sus sucursales puedan hacerlo también (ver `@/features/sucursales`). */
+export async function setAmbienteTimbrado(id: number, ambiente: "sandbox" | "produccion"): Promise<void> {
+  await db.update(clientes).set({ ambienteTimbrado: ambiente }).where(eq(clientes.id, id));
 }
 
 export async function getStats() {

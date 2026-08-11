@@ -4,7 +4,7 @@ import { leerLlavePrivada } from "@/lib/cfdi/sello";
 import { decryptSecret } from "@/lib/crypto/secrets";
 import { cancelarConFinkok, consultarEstatusSat } from "@/lib/finkok/cancel";
 import type { CodigoMotivo, EstatusSat } from "@/lib/finkok/cancel-soap";
-import { credencialesFinkok, type AmbienteTimbrado } from "@/lib/finkok/credenciales";
+import { credencialesFinkok } from "@/lib/finkok/credenciales";
 import { getEmisorDetalle } from "../repositories/emisor-repository";
 import { existeFacturaTimbradaConFolioFiscal, getFacturaDetalle, marcarCancelacion } from "../repositories/facturas-repository";
 import type { CancelarResult } from "../types";
@@ -41,11 +41,15 @@ function estatusFinal(sat: EstatusSat | null, estatusUuid: string | null): strin
  * cancelación con el CSD directamente (recibe cer/key en PEM, no aquí, ver
  * `@/lib/finkok/cancel-soap`): la llave se descifra aquí una sola vez para
  * exportarla a PEM sin passphrase, que es lo que el PAC exige.
+ *
+ * El ambiente NO se recalcula desde la sucursal: se usa el que quedó grabado
+ * en la factura al timbrarla (`facturaDetalle.ambienteTimbrado`). El toggle
+ * por sucursal (`@/features/sucursales`) puede haber cambiado desde entonces
+ * — cancelar tiene que ir al mismo ambiente de Finkok donde vive el UUID.
  */
 export async function cancelarFacturaUseCase(
   idFactura: number,
   idCliente: number,
-  ambiente: AmbienteTimbrado,
   motivo: CodigoMotivo,
   folioSustitucion: string | null,
 ): Promise<CancelarResult> {
@@ -55,6 +59,10 @@ export async function cancelarFacturaUseCase(
     return { ok: false, error: "Solo se puede cancelar una factura timbrada y vigente." };
   }
   if (!facturaDetalle.folioFiscal) return { ok: false, error: "Esta factura no tiene folio fiscal." };
+  if (!facturaDetalle.ambienteTimbrado) {
+    return { ok: false, error: "No se pudo determinar el ambiente en el que se timbró esta factura." };
+  }
+  const ambiente = facturaDetalle.ambienteTimbrado;
   if (motivo === "01") {
     if (!folioSustitucion) {
       return { ok: false, error: "El motivo 01 requiere el folio fiscal que sustituye a esta factura." };

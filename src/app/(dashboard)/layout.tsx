@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { RefreshOnFocus } from "@/components/providers/RefreshOnFocus";
 import {
   DashboardHeader,
   SessionProvider,
@@ -20,6 +21,7 @@ export default async function DashboardLayout({
   return (
     <QueryProvider>
       <SessionProvider value={session}>
+        <RefreshOnFocus />
         <div className="min-h-dvh bg-paper text-ink">
           <DashboardHeader />
           <main>{children}</main>

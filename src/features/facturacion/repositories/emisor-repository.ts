@@ -32,6 +32,8 @@ export type EmisorDetalle = {
   codigoPostal: number | null;
   serie: string | null;
   csd: { cer: Buffer; key: Buffer; passwordEnc: Buffer; numeroCertificado: string } | null;
+  /** Ambiente de Finkok con el que esta empresa factura HOY (toggle por sucursal, ver `@/features/sucursales`). */
+  ambienteTimbrado: "sandbox" | "produccion";
 };
 
 export async function getEmisorDetalle(idEmpresa: number, idCliente: number): Promise<EmisorDetalle | null> {
@@ -48,6 +50,7 @@ export async function getEmisorDetalle(idEmpresa: number, idCliente: number): Pr
       signKey: empresas.signKey,
       signPasswordEnc: empresas.signPasswordEnc,
       signNumeroCertificado: empresas.signNumeroCertificado,
+      ambienteTimbrado: empresas.ambienteTimbrado,
     })
     .from(empresas)
     .where(and(eq(empresas.id, idEmpresa), eq(empresas.idCliente, idCliente), esEmpresaPropia))
@@ -73,5 +76,6 @@ export async function getEmisorDetalle(idEmpresa: number, idCliente: number): Pr
     codigoPostal: row.codigoPostal,
     serie: row.serie,
     csd,
+    ambienteTimbrado: row.ambienteTimbrado === "produccion" ? "produccion" : "sandbox",
   };
 }

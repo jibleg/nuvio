@@ -46,7 +46,11 @@ const copy: Record<
   },
 };
 
-export function Plans() {
+type PlansProps = {
+  isTenant?: boolean;
+};
+
+export function Plans({ isTenant = false }: PlansProps) {
   return (
     <section id="planes" className="relative py-24 sm:py-28">
       <div className="mx-auto max-w-6xl px-5">
@@ -125,16 +129,18 @@ export function Plans() {
                     ))}
                   </ul>
 
-                  <div className="mt-8">
-                    <Button
-                      href="#cta"
-                      variant={c.recomendado ? "primary" : "secondary"}
-                      className="w-full"
-                      withArrow
-                    >
-                      Comenzar gratis
-                    </Button>
-                  </div>
+                  {!isTenant && (
+                    <div className="mt-8">
+                      <Button
+                        href="#cta"
+                        variant={c.recomendado ? "primary" : "secondary"}
+                        className="w-full"
+                        withArrow
+                      >
+                        Comenzar gratis
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );

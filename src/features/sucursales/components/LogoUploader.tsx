@@ -11,6 +11,11 @@ const labelClass = "mb-1.5 block text-sm font-semibold text-ink-soft";
  * Logo del emisor para el hero de la representación impresa (PDF) de
  * facturas y complementos de pago. Igual que el CSD, se sube aparte de los
  * datos fiscales: cambiar el logo no debe obligar a re-capturar nada más.
+ *
+ * No usa `<form>` propio: vive dentro del `<form>` de SucursalForm, y un
+ * `<form>` anidado es HTML inválido (ver el mismo razonamiento en
+ * `@/features/csd/components/CsdUploader.tsx`). La subida se dispara a mano
+ * leyendo el input de archivo por ref.
  */
 export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
   const [detalle, setDetalle] = useState<LogoDetalle | null>(null);
@@ -18,7 +23,7 @@ export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
   const [error, setError] = useState<string | null>(null);
   const [exito, setExito] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const formRef = useRef<HTMLFormElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,9 +42,24 @@ export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
 
   const cacheBuster = useRef(0);
 
-  const onSubmit = (formData: FormData) => {
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  };
+
+  const onSubir = () => {
     setError(null);
     setExito(false);
+
+    const archivo = fileRef.current?.files?.[0];
+    if (!archivo) {
+      setError("Selecciona una imagen.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("logo", archivo);
+
     startTransition(async () => {
       const result = await subirLogoAction(idEmpresa, formData);
       if (!result.ok) {
@@ -47,17 +67,12 @@ export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
         return;
       }
       setExito(true);
-      formRef.current?.reset();
+      if (fileRef.current) fileRef.current.value = "";
       setPreviewUrl(null);
       cacheBuster.current += 1;
       const actualizado = await getLogoDetalleAction(idEmpresa);
       setDetalle(actualizado);
     });
-  };
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    setPreviewUrl(file ? URL.createObjectURL(file) : null);
   };
 
   const urlLogoActual = detalle?.tieneLogo
@@ -91,14 +106,14 @@ export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
           )}
         </div>
 
-        <form ref={formRef} action={onSubmit} className="flex-1 space-y-3">
+        <div className="flex-1 space-y-3">
           <input
             className="block w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-brand-50 file:px-3.5 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:file:text-brand-200"
             type="file"
-            name="logo"
             accept="image/png,image/jpeg"
+            ref={fileRef}
+            disabled={isPending}
             onChange={onFileChange}
-            required
           />
 
           {error && (
@@ -115,14 +130,15 @@ export function LogoUploader({ idEmpresa }: { idEmpresa: number }) {
           )}
 
           <button
-            type="submit"
+            type="button"
+            onClick={onSubir}
             disabled={isPending}
             className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 disabled:opacity-70 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
           >
             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            {detalle?.tieneLogo ? "Reemplazar logo" : "Subir logo"}
+            {isPending ? "Subiendo…" : detalle?.tieneLogo ? "Reemplazar logo" : "Subir logo"}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

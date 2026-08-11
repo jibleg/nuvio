@@ -28,7 +28,7 @@ import { updateClienteUseCase } from "./use-cases/update-cliente";
 import { resetAdminPasswordUseCase } from "./use-cases/reset-admin-password";
 import { deleteClienteUseCase } from "./use-cases/delete-cliente";
 import { revocarSuperAdminSesion } from "./repositories/super-admins-repository";
-import { existsSlug, getClienteDetalle, setActivo } from "./repositories/clientes-repository";
+import { existsSlug, getClienteDetalle, setActivo, setAmbienteTimbrado } from "./repositories/clientes-repository";
 import type { ClienteDetalle } from "./types";
 
 export type SuperAdminActionResult = { error: string };
@@ -137,5 +137,16 @@ export async function toggleClienteActivoAction(
   await requireSuperAdminSession();
 
   await setActivo(id, activo);
+  revalidatePath(ROUTES.superadminClientes);
+}
+
+/** Aprueba (o revoca) el gate de Finkok de la cuenta — solo el panel interno puede pasarlo a 'produccion'. */
+export async function toggleClienteAmbienteTimbradoAction(
+  id: number,
+  ambiente: "sandbox" | "produccion",
+): Promise<SuperAdminActionResult | void> {
+  await requireSuperAdminSession();
+
+  await setAmbienteTimbrado(id, ambiente);
   revalidatePath(ROUTES.superadminClientes);
 }

@@ -53,11 +53,19 @@ export type FacturaDetalle = FacturaListItem & {
   idMetodo: number;
   idMoneda: number;
   observacion: string | null;
+  /** Régimen fiscal del emisor y del receptor al momento de timbrar (foto, no referencia) — `null` en un borrador aún sin timbrar. */
+  idRegimenEmisor: number | null;
+  idRegimenReceptor: number | null;
+  /** Lugar de expedición (CP del emisor) y CP del receptor, ambos snapshot al timbrar — `null` en un borrador. */
+  cpExpedicion: number | null;
+  codigoPostalReceptor: number | null;
   conceptos: (ConceptoInput & { importe: number })[];
   /** UUID del CFDI al que este comprobante sustituye (refacturación), si aplica. */
   cfdiRelacionado: string | null;
   /** `"04"` = sustitución de los CFDI previos — el único tipo de relación que emite Nuvio. */
   tipoRelacion: string | null;
+  /** Ambiente de Finkok con el que se timbró (`null` = borrador aún sin timbrar, o fila histórica sin este dato). */
+  ambienteTimbrado: "sandbox" | "produccion" | null;
 };
 
 /** Referencia liviana a otra factura del mismo cliente — usada para enlazar original ↔ sustituto en refacturación. */
@@ -181,4 +189,6 @@ export type PagoDetalle = PagoListItem & {
   idFormaPago: number | null;
   numeroOperacion: string | null;
   documentosDetalle: PagoDocumentoDetalle[];
+  /** Ambiente de Finkok con el que se timbró (`null` = borrador aún sin timbrar, o fila histórica sin este dato). */
+  ambienteTimbrado: "sandbox" | "produccion" | null;
 };

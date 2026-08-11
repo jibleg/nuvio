@@ -22,6 +22,8 @@ export type ClienteListItem = {
   empresasCount: number;
   usuariosCount: number;
   moduloKeys: string[];
+  /** Gate de Finkok: nace en 'sandbox', solo aquí (panel interno) se pasa a 'produccion'. */
+  ambienteTimbrado: "sandbox" | "produccion";
 };
 
 export type ClienteDetalle = {
@@ -35,6 +37,7 @@ export type ClienteDetalle = {
   moduloKeys: string[];
   /** Usuario administrador sembrado en el onboarding (login "admin"), si existe. */
   adminUsuario: { id: number; nombre: string; email: string | null } | null;
+  ambienteTimbrado: "sandbox" | "produccion";
 };
 
 /** Datos del wizard de alta: cliente + su primera empresa + su primer administrador. */

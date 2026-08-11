@@ -9,7 +9,6 @@ import {
   Ban,
   Banknote,
   CheckCircle2,
-  Download,
   FileCode2,
   FileText,
   Loader2,
@@ -26,6 +25,7 @@ import type { FacturaDetalle, FacturaResumenRelacion, PagoAplicado } from "../ty
 import { CancelarFacturaModal } from "./CancelarFacturaModal";
 import { EnviarCorreoModal } from "./EnviarCorreoModal";
 import { FacturaForm } from "./FacturaForm";
+import { PdfPreviewPanel, PdfToggleButton } from "./PdfViewer";
 
 const AVISO_CANCELACION: Record<string, string> = {
   solicitada: "Cancelación en proceso: pendiente de que el receptor la acepte o rechace (o venzan 72 h).",
@@ -75,6 +75,8 @@ export function FacturaDetalleView({
   const [refacturando, setRefacturando] = useState(false);
   const [errorRefacturar, setErrorRefacturar] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [verPdf, setVerPdf] = useState(false);
+  const pdfSrc = `${ROUTES.facturacion}/${factura.id}/pdf`;
 
   const refacturar = () => {
     setErrorRefacturar(null);
@@ -96,8 +98,9 @@ export function FacturaDetalleView({
       <div className="space-y-5">
         {facturaOriginal && <BannerSustituye facturaOriginal={facturaOriginal} />}
         <FacturaForm mode="edit" initial={factura} />
-        {puedeGestionar && (
-          <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Vista previa PDF" />
+          {puedeGestionar && (
             <button
               type="button"
               onClick={() => setEliminando(true)}
@@ -106,8 +109,9 @@ export function FacturaDetalleView({
               <Trash2 className="h-4 w-4" />
               Eliminar borrador
             </button>
-          </div>
-        )}
+          )}
+        </div>
+        {verPdf && <PdfPreviewPanel src={pdfSrc} />}
         <EliminarBorradorModal open={eliminando} idFactura={factura.id} onClose={() => setEliminando(false)} />
       </div>
     );
@@ -193,15 +197,7 @@ export function FacturaDetalleView({
         )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <a
-            href={`${ROUTES.facturacion}/${factura.id}/pdf`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
-          >
-            <Download className="h-4 w-4" />
-            Ver / imprimir PDF
-          </a>
+          <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Ver PDF" variant="primary" />
           <a
             href={`${ROUTES.facturacion}/${factura.id}/xml`}
             className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:text-brand-300"
@@ -242,6 +238,8 @@ export function FacturaDetalleView({
           )}
         </div>
       </Card>
+
+      {verPdf && <PdfPreviewPanel src={pdfSrc} />}
 
       {saldoPendiente !== null && (
         <Card bodyClassName="p-5">

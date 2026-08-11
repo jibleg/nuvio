@@ -3,7 +3,7 @@ import { leerLlavePrivada } from "@/lib/cfdi/sello";
 import { decryptSecret } from "@/lib/crypto/secrets";
 import { cancelarConFinkok, consultarEstatusSat } from "@/lib/finkok/cancel";
 import type { CodigoMotivo, EstatusSat } from "@/lib/finkok/cancel-soap";
-import { credencialesFinkok, type AmbienteTimbrado } from "@/lib/finkok/credenciales";
+import { credencialesFinkok } from "@/lib/finkok/credenciales";
 import { getEmisorDetalle } from "../repositories/emisor-repository";
 import { marcarCancelacion } from "../repositories/facturas-repository";
 import { getPagoDetalle } from "../repositories/pagos-repository";
@@ -37,11 +37,13 @@ function estatusFinal(sat: EstatusSat | null, estatusUuid: string | null): strin
  * se reutiliza tal cual. Al cancelarse, el saldo de los ingresos que
  * liquidaba vuelve a aparecer en "por pagar" (`listFacturasPorPagar` excluye
  * los complementos con `estatusCancelacion = 'cancelada'`).
+ *
+ * El ambiente es el grabado al timbrar el complemento, no el de la sucursal
+ * hoy (ver el mismo razonamiento en `cancelar-factura.ts`).
  */
 export async function cancelarPagoUseCase(
   idPago: number,
   idCliente: number,
-  ambiente: AmbienteTimbrado,
   motivo: CodigoMotivo,
 ): Promise<CancelarResult> {
   const pagoDetalle = await getPagoDetalle(idPago, idCliente);
@@ -50,6 +52,10 @@ export async function cancelarPagoUseCase(
     return { ok: false, error: "Solo se puede cancelar un complemento de pago timbrado y vigente." };
   }
   if (!pagoDetalle.folioFiscal) return { ok: false, error: "Este complemento no tiene folio fiscal." };
+  if (!pagoDetalle.ambienteTimbrado) {
+    return { ok: false, error: "No se pudo determinar el ambiente en el que se timbró este complemento." };
+  }
+  const ambiente = pagoDetalle.ambienteTimbrado;
 
   const emisor = await getEmisorDetalle(pagoDetalle.idEmpresaEmisora, idCliente);
   if (!emisor || !emisor.csd) return { ok: false, error: "No se encontró el CSD de la empresa emisora." };

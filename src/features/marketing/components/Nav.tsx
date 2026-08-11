@@ -15,7 +15,11 @@ const links = [
   { label: "Próximamente", href: "#roadmap" },
 ];
 
-export function Nav() {
+type NavProps = {
+  isTenant?: boolean;
+};
+
+export function Nav({ isTenant = false }: NavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -54,12 +58,20 @@ export function Nav() {
 
         <div className="hidden items-center gap-2 lg:flex">
           <ThemeToggle />
-          <Button href="/login" variant="ghost" className="px-4">
-            Iniciar sesión
-          </Button>
-          <Button href="#cta" variant="primary" withArrow>
-            Comenzar gratis
-          </Button>
+          {isTenant ? (
+            <Button href="/login" variant="primary" withArrow>
+              Iniciar sesión
+            </Button>
+          ) : (
+            <>
+              <Button href="/login" variant="ghost" className="px-4">
+                Iniciar sesión
+              </Button>
+              <Button href="#cta" variant="primary" withArrow>
+                Comenzar gratis
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 lg:hidden">
@@ -94,12 +106,20 @@ export function Nav() {
               </a>
             ))}
             <div className="mt-2 flex flex-col gap-2">
-              <Button href="/login" variant="secondary" className="w-full">
-                Iniciar sesión
-              </Button>
-              <Button href="#cta" variant="primary" withArrow className="w-full">
-                Comenzar gratis
-              </Button>
+              {isTenant ? (
+                <Button href="/login" variant="primary" withArrow className="w-full">
+                  Iniciar sesión
+                </Button>
+              ) : (
+                <>
+                  <Button href="/login" variant="secondary" className="w-full">
+                    Iniciar sesión
+                  </Button>
+                  <Button href="#cta" variant="primary" withArrow className="w-full">
+                    Comenzar gratis
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
         )}

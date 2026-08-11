@@ -6,6 +6,9 @@
  * de su matriz al momento de facturar. Solo si la sucursal factura con una
  * razón social propia (certificado/CSD distinto) se llenan con datos propios.
  */
+/** Ambiente de Finkok para timbrar a nombre de una empresa: pruebas (sin validez fiscal) o SAT real. */
+export type AmbienteFacturacion = "sandbox" | "produccion";
+
 export type SucursalListItem = {
   id: number;
   nombreComercial: string;
@@ -30,6 +33,7 @@ export type SucursalDetalle = SucursalListItem & {
   rfcEfectivo: string | null;
   razonSocialEfectiva: string | null;
   idRegimenEfectivo: number | null;
+  ambienteTimbrado: AmbienteFacturacion;
 };
 
 export type SucursalFormData = {

@@ -37,6 +37,19 @@ function esMismoDia(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+/** Fecha de hoy en local, formato ISO `yyyy-mm-dd` — para usar como `max` en campos que no aceptan fechas futuras. */
+export function todayISO(): string {
+  return toISO(new Date());
+}
+
+/**
+ * Arranque de operación real de Nuvio (decisión del usuario, 2026-08-12):
+ * ningún dato de negocio (facturas, pagos, filtros de consulta) es anterior
+ * a esta fecha. Úsala como `min` en cualquier `DateField` nuevo que capture
+ * o filtre por fechas de operación, junto con `max={todayISO()}`.
+ */
+export const FECHA_MINIMA_OPERACION = "2026-01-01";
+
 /** Grilla fija de 6 semanas (42 días) empezando el lunes de la semana del día 1. */
 function buildMonthGrid(viewYear: number, viewMonth: number): Date[] {
   const first = new Date(viewYear, viewMonth, 1);
@@ -67,6 +80,9 @@ type DateFieldProps = {
   name?: string;
   id?: string;
   required?: boolean;
+  /** ISO `yyyy-mm-dd`, inclusive. Los días fuera de [`min`, `max`] quedan deshabilitados en el calendario. */
+  min?: string;
+  max?: string;
   size?: "sm" | "md";
   placeholder?: string;
   disabled?: boolean;
@@ -89,12 +105,17 @@ export function DateField({
   name,
   id,
   required,
+  min,
+  max,
   size = "md",
   placeholder = "Seleccionar fecha",
   disabled,
   className,
   "aria-label": ariaLabel,
 }: DateFieldProps) {
+  const limiteMin = parseISO(min);
+  const limiteMax = parseISO(max);
+  const fueraDeRango = (d: Date) => (limiteMin !== null && d < limiteMin) || (limiteMax !== null && d > limiteMax);
   const controlado = value !== undefined;
   const [interno, setInterno] = useState(defaultValue ?? "");
   const actual = controlado ? value : interno;
@@ -161,6 +182,12 @@ export function DateField({
   const dias = buildMonthGrid(view.year, view.month);
   const mesAnterior = () => setView((v) => (v.month === 0 ? { year: v.year - 1, month: 11 } : { year: v.year, month: v.month - 1 }));
   const mesSiguiente = () => setView((v) => (v.month === 11 ? { year: v.year + 1, month: 0 } : { year: v.year, month: v.month + 1 }));
+  // Deshabilita la navegación cuando el mes completo adyacente ya queda fuera de [min, max].
+  const finDeMesAnterior = new Date(view.year, view.month, 0);
+  const inicioDeMesSiguiente = new Date(view.year, view.month + 1, 1);
+  const noHayMesAnterior = limiteMin !== null && finDeMesAnterior < limiteMin;
+  const noHayMesSiguiente = limiteMax !== null && inicioDeMesSiguiente > limiteMax;
+  const hoyFueraDeRango = fueraDeRango(hoy);
 
   return (
     <div className="relative inline-block">
@@ -202,8 +229,9 @@ export function DateField({
               <button
                 type="button"
                 onClick={mesAnterior}
+                disabled={noHayMesAnterior}
                 aria-label="Mes anterior"
-                className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition-colors hover:bg-cloud hover:text-brand-700 dark:hover:text-brand-300"
+                className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition-colors hover:bg-cloud hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:text-brand-300"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -213,8 +241,9 @@ export function DateField({
               <button
                 type="button"
                 onClick={mesSiguiente}
+                disabled={noHayMesSiguiente}
                 aria-label="Mes siguiente"
-                className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition-colors hover:bg-cloud hover:text-brand-700 dark:hover:text-brand-300"
+                className="grid h-7 w-7 place-items-center rounded-full text-ink-soft transition-colors hover:bg-cloud hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:hover:text-brand-300"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -230,20 +259,24 @@ export function DateField({
                 const fueraDeMes = d.getMonth() !== view.month;
                 const esHoy = esMismoDia(d, hoy);
                 const esSeleccionado = seleccionado !== null && esMismoDia(d, seleccionado);
+                const deshabilitado = fueraDeRango(d);
                 return (
                   <button
                     key={i}
                     type="button"
+                    disabled={deshabilitado}
                     onClick={() => elegir(d)}
                     className={cn(
                       "grid h-8 w-8 place-items-center rounded-full text-sm transition-colors",
-                      esSeleccionado
-                        ? "bg-brand-700 font-semibold text-white shadow-glow dark:bg-brand-600 dark:text-brand-950"
-                        : esHoy
-                          ? "font-semibold text-brand-700 ring-1 ring-inset ring-brand-400 dark:text-brand-300"
-                          : fueraDeMes
-                            ? "text-muted/40 hover:bg-cloud"
-                            : "text-ink hover:bg-cloud",
+                      deshabilitado
+                        ? "cursor-not-allowed text-muted/30"
+                        : esSeleccionado
+                          ? "bg-brand-700 font-semibold text-white shadow-glow dark:bg-brand-600 dark:text-brand-950"
+                          : esHoy
+                            ? "font-semibold text-brand-700 ring-1 ring-inset ring-brand-400 dark:text-brand-300"
+                            : fueraDeMes
+                              ? "text-muted/40 hover:bg-cloud"
+                              : "text-ink hover:bg-cloud",
                     )}
                   >
                     {d.getDate()}
@@ -256,7 +289,8 @@ export function DateField({
               <button
                 type="button"
                 onClick={() => elegir(hoy)}
-                className="text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 dark:hover:text-brand-300"
+                disabled={hoyFueraDeRango}
+                className="text-xs font-semibold text-brand-600 transition-colors hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:text-brand-300"
               >
                 Hoy
               </button>

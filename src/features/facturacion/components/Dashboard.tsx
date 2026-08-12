@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { Banknote, CheckCircle2, Download, FileText, Pencil, Plus, Trophy, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
-import { DateField } from "@/components/ui/DateField";
+import { DateField, FECHA_MINIMA_OPERACION, todayISO } from "@/components/ui/DateField";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
 import { ROUTES } from "@/config/routes";
@@ -271,6 +271,8 @@ export function Dashboard({
               id="paquete-desde"
               name="desde"
               defaultValue={paqueteDesdeDefault}
+              min={FECHA_MINIMA_OPERACION}
+              max={todayISO()}
               required
             />
           </div>
@@ -282,6 +284,8 @@ export function Dashboard({
               id="paquete-hasta"
               name="hasta"
               defaultValue={paqueteHastaDefault}
+              min={FECHA_MINIMA_OPERACION}
+              max={todayISO()}
               required
             />
           </div>

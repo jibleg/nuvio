@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, Banknote, Loader2, Save, User } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { DateField } from "@/components/ui/DateField";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
 import { ROUTES } from "@/config/routes";
@@ -163,7 +164,7 @@ export function PagoForm() {
                 </div>
                 <div>
                   <span className={labelClass}>Fecha del pago</span>
-                  <input type="date" className={inputClass} value={fechaPago} onChange={(e) => setFechaPago(e.target.value)} />
+                  <DateField value={fechaPago} onChange={setFechaPago} />
                 </div>
                 <div>
                   <span className={labelClass}>

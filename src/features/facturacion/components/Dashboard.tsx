@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { Banknote, CheckCircle2, Download, FileText, Pencil, Plus, Trophy, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { DateField } from "@/components/ui/DateField";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
 import { ROUTES } from "@/config/routes";
@@ -266,26 +267,22 @@ export function Dashboard({
             <label htmlFor="paquete-desde" className="mb-1 block text-xs font-medium text-muted">
               Desde
             </label>
-            <input
+            <DateField
               id="paquete-desde"
-              type="date"
               name="desde"
               defaultValue={paqueteDesdeDefault}
               required
-              className="w-full rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-ink outline-none focus:border-brand-400"
             />
           </div>
           <div className="flex-1">
             <label htmlFor="paquete-hasta" className="mb-1 block text-xs font-medium text-muted">
               Hasta
             </label>
-            <input
+            <DateField
               id="paquete-hasta"
-              type="date"
               name="hasta"
               defaultValue={paqueteHastaDefault}
               required
-              className="w-full rounded-full border border-line bg-surface px-3.5 py-2 text-sm text-ink outline-none focus:border-brand-400"
             />
           </div>
           <button

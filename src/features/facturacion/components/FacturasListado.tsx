@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Ban, CheckCircle2, FileText, Loader2, Pencil, Plus, RefreshCw, Search, Wallet } from "lucide-react";
 import { ROUTES } from "@/config/routes";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DateField } from "@/components/ui/DateField";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatTile } from "@/components/ui/StatTile";
 import { StatusBadge, type StatusTone } from "@/components/ui/StatusBadge";
@@ -193,21 +194,9 @@ export function FacturasListado({
           ))}
         </div>
         <div className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="date"
-            value={desde}
-            onChange={(e) => setDesde(e.target.value)}
-            className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink outline-none focus:border-brand-400"
-            aria-label="Desde"
-          />
+          <DateField size="sm" value={desde} onChange={setDesde} aria-label="Desde" />
           <span>—</span>
-          <input
-            type="date"
-            value={hasta}
-            onChange={(e) => setHasta(e.target.value)}
-            className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink outline-none focus:border-brand-400"
-            aria-label="Hasta"
-          />
+          <DateField size="sm" value={hasta} onChange={setHasta} aria-label="Hasta" />
         </div>
       </div>
 

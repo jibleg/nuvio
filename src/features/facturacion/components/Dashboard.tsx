@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Banknote, CheckCircle2, Download, FileText, Pencil, Plus, Trophy, Wallet } from "lucide-react";
+import { Banknote, CheckCircle2, Download, FileText, Plus, Trophy, Wallet, XCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { DateField, FECHA_MINIMA_OPERACION, todayISO } from "@/components/ui/DateField";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -118,7 +118,13 @@ export function Dashboard({
           accent="from-sunrise-300 to-sunrise-500"
           hint="Saldo de facturas a crédito"
         />
-        <StatTile icon={Pencil} label="Borradores abiertos" value={resumen.borradores} accent="from-sky-soft to-brand-400" />
+        <StatTile
+          icon={XCircle}
+          label="Facturas canceladas"
+          value={resumen.canceladas}
+          accent="from-rose-400 to-red-600"
+          hint={`Total: ${formatoMoneda.format(resumen.canceladasTotal)}`}
+        />
       </div>
 
       {puedeGestionar && (

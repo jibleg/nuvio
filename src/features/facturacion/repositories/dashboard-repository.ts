@@ -22,6 +22,7 @@ export type ResumenFacturacion = {
   timbradasTotal: number;
   borradores: number;
   canceladas: number;
+  canceladasTotal: number;
 };
 
 /** Conteos y facturado del mes en curso — para los stat tiles del dashboard. */
@@ -29,11 +30,12 @@ export async function getResumenFacturacion(idCliente: number): Promise<ResumenF
   const desdeMes = fechaISO(new Date().getDate() - 1);
   const [row] = await db
     .select({
-      facturadoMes: sql<string>`coalesce(sum(${factura.importe}) filter (where ${factura.tipoFactura} = 1 and ${factura.fechaTimbrado} >= ${desdeMes}), 0)`,
-      timbradasMes: sql<number>`count(*) filter (where ${factura.tipoFactura} = 1 and ${factura.fechaTimbrado} >= ${desdeMes})::int`,
+      facturadoMes: sql<string>`coalesce(sum(${factura.importe}) filter (where ${factura.tipoFactura} = 1 and ${factura.fechaTimbrado} >= ${desdeMes} and ${factura.estatusCancelacion} is distinct from 'cancelada'), 0)`,
+      timbradasMes: sql<number>`count(*) filter (where ${factura.tipoFactura} = 1 and ${factura.fechaTimbrado} >= ${desdeMes} and ${factura.estatusCancelacion} is distinct from 'cancelada')::int`,
       timbradasTotal: sql<number>`count(*) filter (where ${factura.tipoFactura} = 1 and ${factura.estatusCancelacion} is distinct from 'cancelada')::int`,
       borradores: sql<number>`count(*) filter (where ${factura.tipoFactura} = 0)::int`,
       canceladas: sql<number>`count(*) filter (where ${factura.estatusCancelacion} = 'cancelada')::int`,
+      canceladasTotal: sql<string>`coalesce(sum(${factura.importe}) filter (where ${factura.estatusCancelacion} = 'cancelada'), 0)`,
     })
     .from(factura)
     .innerJoin(empresas, eq(empresas.id, factura.idEmpresaEmisora))
@@ -45,6 +47,7 @@ export async function getResumenFacturacion(idCliente: number): Promise<ResumenF
     timbradasTotal: row?.timbradasTotal ?? 0,
     borradores: row?.borradores ?? 0,
     canceladas: row?.canceladas ?? 0,
+    canceladasTotal: Number(row?.canceladasTotal ?? 0),
   };
 }
 

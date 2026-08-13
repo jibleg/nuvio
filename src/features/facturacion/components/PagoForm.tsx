@@ -153,14 +153,16 @@ export function PagoForm() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <span className={labelClass}>Forma de pago</span>
-                  <select className={inputClass} value={idFormaPago} onChange={(e) => setIdFormaPago(e.target.value)}>
-                    <option value="">Selecciona…</option>
-                    {formasPago.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.clave} — {f.descripcion ?? f.clave}
-                      </option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={idFormaPago}
+                    onChange={setIdFormaPago}
+                    searchPlaceholder="Buscar forma de pago…"
+                    options={formasPago.map((f) => ({
+                      value: String(f.id),
+                      label: f.clave,
+                      sublabel: f.descripcion ?? undefined,
+                    }))}
+                  />
                 </div>
                 <div>
                   <span className={labelClass}>Fecha del pago</span>

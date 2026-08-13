@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Mail, Send } from "lucide-react";
+import { AlertCircle, Loader2, Mail, Send } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { notifySuccess } from "@/lib/toast";
 import { enviarFacturaCorreoAction, getEmailReceptorAction } from "../actions";
 
 const inputClass =
@@ -32,7 +33,6 @@ export function EnviarCorreoModal({
   const [correo, setCorreo] = useState("");
   const [cargandoCorreo, setCargandoCorreo] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [enviado, setEnviado] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const { partes, validos, hayInvalidos } = useMemo(() => parsearCorreos(correo), [correo]);
@@ -41,7 +41,6 @@ export function EnviarCorreoModal({
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setEnviado(false);
     setCargandoCorreo(true);
     getEmailReceptorAction(idFactura).then((email) => {
       setCorreo(email ?? "");
@@ -58,7 +57,8 @@ export function EnviarCorreoModal({
         setError(result.error);
         return;
       }
-      setEnviado(true);
+      onClose();
+      notifySuccess("Factura enviada correctamente.");
     });
   }
 
@@ -107,12 +107,6 @@ export function EnviarCorreoModal({
           <p className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {error}
-          </p>
-        )}
-        {enviado && (
-          <p className="flex items-center gap-2 rounded-xl border border-brand-400/30 bg-brand-50 px-3.5 py-2.5 text-sm font-medium text-brand-700 dark:bg-brand-400/10 dark:text-brand-200">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            Factura enviada correctamente.
           </p>
         )}
 

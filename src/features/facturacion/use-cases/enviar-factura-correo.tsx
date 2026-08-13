@@ -1,4 +1,5 @@
 import { enviarCorreo, remitenteTenant, type EnviarCorreoResult } from "@/lib/email/sparkpost";
+import { datosTimbre, urlQrSat } from "@/lib/cfdi/tfd";
 import { armarPdfFactura } from "../pdf/armar-pdf-factura";
 import { getFacturaDetalle, getXmlTimbrado } from "../repositories/facturas-repository";
 import { plantillaCorreoFactura } from "./plantilla-correo-factura";
@@ -32,10 +33,23 @@ export async function enviarFacturaCorreoUseCase(
   const pdfBuffer = await armarPdfFactura(factura, idCliente);
   const nombreArchivo = `factura-${factura.folioFiscal ?? factura.id}`;
 
+  // Mismo link que codifica el QR del PDF (`armar-pdf-factura.tsx`) — se
+  // arma aquí también en vez de devolverlo desde `armarPdfFactura` para no
+  // acoplar la generación del PDF al contenido del correo.
+  const timbre = datosTimbre(xml);
+  const urlValidacion = urlQrSat({
+    uuid: factura.folioFiscal,
+    rfcEmisor: factura.emisorRfc ?? "",
+    rfcReceptor: factura.receptorRfc ?? "",
+    total: timbre.total ?? (factura.total ? Number(factura.total) : null),
+    selloCfdi: timbre.selloCfdi,
+  });
+
   const html = plantillaCorreoFactura({
     receptorNombre: factura.receptorNombre,
     emisorNombre: factura.emisorNombre,
     folioFiscal: factura.folioFiscal,
+    urlValidacion,
   });
 
   const nombreEmisor = factura.emisorNombre ?? "Tu proveedor";

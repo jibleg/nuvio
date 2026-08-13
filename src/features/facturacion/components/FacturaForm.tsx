@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Copy, FileText, Loader2, Package, Pencil, Plus, Save, Trash2, UserPlus, Zap } from "lucide-react";
+import { AlertCircle, Building2, Copy, FileText, Loader2, Package, Pencil, Plus, Save, Trash2, UserPlus, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { SearchableSelect } from "@/components/ui/SearchableSelect";
@@ -48,9 +48,15 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
   const [cargandoClienteEditar, setCargandoClienteEditar] = useState(false);
 
   useEffect(() => {
-    listEmisoresAction().then(setEmisores);
+    listEmisoresAction().then((data) => {
+      setEmisores(data);
+      // Con un solo RFC emisor no hay nada que elegir — se preselecciona para
+      // no obligar al operador a confirmar algo sin alternativa real.
+      if (!initial && data.length === 1) setIdEmpresaEmisora(String(data[0].id));
+    });
     listClientesFacturablesAction().then(setClientes);
     listCatalogosFacturaAction().then(setCatalogos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [idEmpresaEmisora, setIdEmpresaEmisora] = useState(initial ? String(initial.idEmpresaEmisora) : "");
@@ -200,17 +206,31 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
         }
         bodyClassName="p-5"
       >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <span className={labelClass}>Empresa emisora</span>
-            <SearchableSelect
-              value={idEmpresaEmisora}
-              onChange={setIdEmpresaEmisora}
-              searchPlaceholder="Buscar empresa…"
-              options={emisores.map((e) => ({ value: String(e.id), label: e.nombreComercial, sublabel: e.rfc }))}
-            />
+        {emisores.length === 1 && (
+          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 px-5 py-4 shadow-glow">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+              <Building2 className="h-5 w-5 text-white" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-white/70">Empresa emisora</p>
+              <p className="truncate font-display text-base font-bold text-white">{emisores[0].nombreComercial}</p>
+              <p className="truncate font-mono text-xs text-white/75">{emisores[0].rfc}</p>
+            </div>
           </div>
-          <div>
+        )}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {emisores.length > 1 && (
+            <div>
+              <span className={labelClass}>Empresa emisora</span>
+              <SearchableSelect
+                value={idEmpresaEmisora}
+                onChange={setIdEmpresaEmisora}
+                searchPlaceholder="Buscar empresa…"
+                options={emisores.map((e) => ({ value: String(e.id), label: e.nombreComercial, sublabel: e.rfc }))}
+              />
+            </div>
+          )}
+          <div className={emisores.length === 1 ? "sm:col-span-2" : undefined}>
             <div className="mb-1.5 flex items-center justify-between">
               <span className={labelInlineClass}>Cliente</span>
               <div className="flex items-center gap-3">

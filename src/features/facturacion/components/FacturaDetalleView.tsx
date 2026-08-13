@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -9,7 +9,11 @@ import {
   Ban,
   Banknote,
   CheckCircle2,
+  ChevronDown,
+  Eye,
+  EyeOff,
   FileCode2,
+  FileDown,
   FileText,
   Loader2,
   Mail,
@@ -23,12 +27,14 @@ import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ROUTES } from "@/config/routes";
 import { notifyError, notifySuccess } from "@/lib/toast";
-import { eliminarBorradorAction, recurrirFacturaAction, refacturarAction, verificarEstatusCancelacionAction } from "../actions";
+import { eliminarBorradorAction, verificarEstatusCancelacionAction } from "../actions";
 import type { FacturaDetalle, FacturaResumenRelacion, PagoAplicado } from "../types";
 import { CancelarFacturaModal } from "./CancelarFacturaModal";
 import { EnviarCorreoModal } from "./EnviarCorreoModal";
 import { FacturaForm } from "./FacturaForm";
 import { PdfPreviewPanel, PdfToggleButton } from "./PdfViewer";
+import { RecurrirFacturaModal } from "./RecurrirFacturaModal";
+import { RefacturarModal } from "./RefacturarModal";
 
 const AVISO_CANCELACION: Record<string, string> = {
   solicitada: "Cancelación en proceso: pendiente de que el receptor la acepte o rechace (o venzan 72 h).",
@@ -75,10 +81,8 @@ export function FacturaDetalleView({
   const [eliminando, setEliminando] = useState(false);
   const [cancelando, setCancelando] = useState(false);
   const [enviandoCorreo, setEnviandoCorreo] = useState(false);
-  const [refacturando, setRefacturando] = useState(false);
-  const [errorRefacturar, setErrorRefacturar] = useState<string | null>(null);
-  const [recurriendo, setRecurriendo] = useState(false);
-  const [errorRecurrir, setErrorRecurrir] = useState<string | null>(null);
+  const [refacturarAbierto, setRefacturarAbierto] = useState(false);
+  const [recurrirAbierto, setRecurrirAbierto] = useState(false);
   const [verificando, setVerificando] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [verPdf, setVerPdf] = useState(false);
@@ -94,36 +98,6 @@ export function FacturaDetalleView({
         return;
       }
       notifySuccess(result.mensaje);
-      router.refresh();
-    });
-  };
-
-  const refacturar = () => {
-    setErrorRefacturar(null);
-    setRefacturando(true);
-    startTransition(async () => {
-      const result = await refacturarAction(factura.id);
-      setRefacturando(false);
-      if (!result.ok) {
-        setErrorRefacturar(result.error);
-        return;
-      }
-      router.push(`${ROUTES.facturacion}/${result.id}`);
-      router.refresh();
-    });
-  };
-
-  const recurrir = () => {
-    setErrorRecurrir(null);
-    setRecurriendo(true);
-    startTransition(async () => {
-      const result = await recurrirFacturaAction(factura.id);
-      setRecurriendo(false);
-      if (!result.ok) {
-        setErrorRecurrir(result.error);
-        return;
-      }
-      router.push(`${ROUTES.facturacion}/${result.id}`);
       router.refresh();
     });
   };
@@ -151,6 +125,12 @@ export function FacturaDetalleView({
       </div>
     );
   }
+
+  // El IVA se deriva del total ya timbrado menos la suma de los conceptos
+  // (en vez de recalcular 16% aquí) para que Importe + IVA cuadre siempre
+  // exacto con el Total, sin arrastrar redondeos por concepto.
+  const importe = factura.conceptos.reduce((acc, c) => acc + c.importe, 0);
+  const iva = factura.total !== null ? Number(factura.total) - importe : null;
 
   return (
     <div className="space-y-5">
@@ -193,12 +173,23 @@ export function FacturaDetalleView({
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Total</p>
-            <p className="mt-0.5 font-semibold text-ink">{factura.total ? formatoMoneda.format(Number(factura.total)) : "—"}</p>
-          </div>
-          <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">Fecha de timbrado</p>
             <p className="mt-0.5 text-ink">{factura.fechaTimbrado ?? "—"}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-4 rounded-xl border border-line bg-cloud/40 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Importe</p>
+            <p className="mt-0.5 font-medium text-ink">{formatoMoneda.format(importe)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">IVA</p>
+            <p className="mt-0.5 font-medium text-ink">{iva !== null ? formatoMoneda.format(iva) : "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Total</p>
+            <p className="mt-0.5 font-bold text-ink">{factura.total ? formatoMoneda.format(Number(factura.total)) : "—"}</p>
           </div>
         </div>
 
@@ -237,70 +228,25 @@ export function FacturaDetalleView({
           </div>
         )}
 
-        {errorRefacturar && (
-          <p className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {errorRefacturar}
-          </p>
-        )}
-
-        {errorRecurrir && (
-          <p className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3.5 py-2.5 text-sm font-medium text-red-500">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {errorRecurrir}
-          </p>
-        )}
-
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Ver PDF" variant="primary" />
-          <a
-            href={`${ROUTES.facturacion}/${factura.id}/xml`}
-            className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:text-brand-300"
-          >
-            <FileCode2 className="h-4 w-4" />
-            Descargar XML
-          </a>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <FacturaAccionesMenu
+            factura={factura}
+            puedeGestionar={puedeGestionar}
+            sustitutoTimbrado={sustitutoTimbrado}
+            verPdf={verPdf}
+            onToggleVerPdf={() => setVerPdf((v) => !v)}
+            onRefacturar={() => setRefacturarAbierto(true)}
+            onRecurrir={() => setRecurrirAbierto(true)}
+            onCancelar={() => setCancelando(true)}
+          />
           {puedeGestionar && (
             <button
               type="button"
               onClick={() => setEnviandoCorreo(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:text-brand-300"
+              className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
             >
               <Mail className="h-4 w-4" />
               Enviar por correo
-            </button>
-          )}
-          {puedeGestionar && factura.estado === "timbrada" && !sustitutoTimbrado && (
-            <button
-              type="button"
-              disabled={refacturando || isPending}
-              onClick={refacturar}
-              className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 disabled:opacity-70 dark:hover:text-brand-300"
-            >
-              {refacturando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat className="h-4 w-4" />}
-              Refacturar
-            </button>
-          )}
-          {puedeGestionar && factura.estado === "timbrada" && (
-            <button
-              type="button"
-              disabled={recurriendo || isPending}
-              onClick={recurrir}
-              title="Crea una nueva factura independiente con los mismos datos, para el siguiente periodo"
-              className="inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-700 disabled:opacity-70 dark:hover:text-brand-300"
-            >
-              {recurriendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Recurrir factura
-            </button>
-          )}
-          {puedeGestionar && factura.estado === "timbrada" && (
-            <button
-              type="button"
-              onClick={() => setCancelando(true)}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10"
-            >
-              <Ban className="h-4 w-4" />
-              Cancelar factura
             </button>
           )}
         </div>
@@ -385,6 +331,157 @@ export function FacturaDetalleView({
         folioSustitucionInicial={sustitutoTimbrado?.folioFiscal ?? ""}
       />
       <EnviarCorreoModal open={enviandoCorreo} idFactura={factura.id} onClose={() => setEnviandoCorreo(false)} />
+      <RefacturarModal open={refacturarAbierto} idFactura={factura.id} onClose={() => setRefacturarAbierto(false)} />
+      <RecurrirFacturaModal open={recurrirAbierto} idFactura={factura.id} onClose={() => setRecurrirAbierto(false)} />
+    </div>
+  );
+}
+
+/**
+ * Consolida Ver PDF / Descargar XML / Refacturar / Recurrir / Cancelar en un
+ * solo dropdown — con todas como botones sueltos la barra de acciones se
+ * volvía invasiva. "Enviar por correo" queda fuera, visible por separado,
+ * por ser la acción más utilizada; "Cancelar factura" va al final del menú
+ * por ser destructiva.
+ */
+function FacturaAccionesMenu({
+  factura,
+  puedeGestionar,
+  sustitutoTimbrado,
+  verPdf,
+  onToggleVerPdf,
+  onRefacturar,
+  onRecurrir,
+  onCancelar,
+}: {
+  factura: FacturaDetalle;
+  puedeGestionar: boolean;
+  sustitutoTimbrado: FacturaResumenRelacion | null;
+  verPdf: boolean;
+  onToggleVerPdf: () => void;
+  onRefacturar: () => void;
+  onRecurrir: () => void;
+  onCancelar: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const puedeRefacturar = puedeGestionar && factura.estado === "timbrada" && !sustitutoTimbrado;
+  const puedeRecurrir = puedeGestionar && factura.estado === "timbrada";
+
+  return (
+    <div ref={ref} className="relative inline-block text-left">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex items-center gap-2 rounded-full bg-brand-700 px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-colors hover:bg-brand-800 dark:bg-brand-600 dark:text-brand-950 dark:hover:bg-brand-500"
+      >
+        Acciones
+        <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-20 mt-2 w-64 overflow-hidden rounded-xl border border-line bg-surface shadow-glow"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onToggleVerPdf();
+            }}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-cloud"
+          >
+            {verPdf ? <EyeOff className="h-4 w-4 text-muted" /> : <Eye className="h-4 w-4 text-muted" />}
+            {verPdf ? "Ocultar PDF" : "Ver PDF"}
+          </button>
+          <a
+            href={`${ROUTES.facturacion}/${factura.id}/pdf`}
+            download
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-cloud"
+          >
+            <FileDown className="h-4 w-4 text-muted" />
+            Descargar PDF
+          </a>
+          <a
+            href={`${ROUTES.facturacion}/${factura.id}/xml`}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-ink transition-colors hover:bg-cloud"
+          >
+            <FileCode2 className="h-4 w-4 text-muted" />
+            Descargar XML
+          </a>
+          {(puedeRefacturar || puedeRecurrir) && (
+            <div className="border-t border-line">
+              {puedeRecurrir && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onRecurrir();
+                  }}
+                  title="Crea una nueva factura independiente con los mismos datos, para el siguiente periodo"
+                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-brand-700 transition-colors hover:bg-brand-500/10 dark:text-brand-300"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Recurrir factura
+                </button>
+              )}
+              {puedeRefacturar && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    onRefacturar();
+                  }}
+                  title="Corrige esta factura: crea un borrador sustituto ligado a ella (CFDI relacionado). Al timbrarlo, podrás cancelar esta con el motivo de sustitución"
+                  className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm font-medium text-brand-700 transition-colors hover:bg-brand-500/10 dark:text-brand-300"
+                >
+                  <Repeat className="h-4 w-4" />
+                  Refacturar
+                </button>
+              )}
+            </div>
+          )}
+          {puedeGestionar && factura.estado === "timbrada" && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onCancelar();
+              }}
+              className="flex w-full items-center gap-2.5 border-t border-line px-3.5 py-2.5 text-left text-sm font-medium text-red-500 transition-colors hover:bg-red-500/10"
+            >
+              <Ban className="h-4 w-4" />
+              Cancelar factura
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -37,12 +37,16 @@ export function plantillaCorreoFactura({
   receptorNombre,
   emisorNombre,
   folioFiscal,
+  urlValidacion,
 }: {
   receptorNombre: string | null;
   emisorNombre: string | null;
   folioFiscal: string | null;
+  /** Mismo link codificado en el QR del PDF (`urlQrSat`) — `null` si falta algún dato del timbre para armarlo. */
+  urlValidacion: string | null;
 }): string {
   const logoUrl = `${env.APP_URL}/brand/nuvio-horizontal.png`;
+  const olmecaLogoUrl = `${env.APP_URL}/brand/olmeca-icon.png`;
   const saludo = receptorNombre ? `Hola ${receptorNombre},` : "Hola,";
   const nombreEmisor = emisorNombre ?? "Tu proveedor";
 
@@ -82,7 +86,7 @@ export function plantillaCorreoFactura({
                 <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:${INK};">
                   <strong>${nombreEmisor}</strong> te envía su factura electrónica. Adjuntamos el PDF y el XML timbrados de este CFDI.
                 </p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_50};border-radius:12px;margin-bottom:8px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_50};border-radius:12px;margin-bottom:${urlValidacion ? "12px" : "8px"};">
                   <tr>
                     <td style="padding:18px 20px;">
                       <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:${BRAND_700};font-family:${FUENTE};">Folio fiscal (UUID)</p>
@@ -90,6 +94,19 @@ export function plantillaCorreoFactura({
                     </td>
                   </tr>
                 </table>
+                ${
+                  urlValidacion
+                    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ${LINE};border-radius:12px;margin-bottom:8px;">
+                  <tr>
+                    <td style="padding:18px 20px;text-align:center;">
+                      <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:${BRAND_700};font-family:${FUENTE};">Verifica la autenticidad de tu factura</p>
+                      <p style="margin:6px 0 0;font-size:13px;line-height:1.5;color:${INK};font-family:${FUENTE};">Consulta este CFDI directamente en el validador del SAT, con el mismo enlace que codifica el QR del PDF.</p>
+                      <a href="${urlValidacion}" style="display:inline-block;margin-top:12px;background:${BRAND_700};color:#ffffff;font-weight:700;font-size:13px;padding:12px 26px;border-radius:999px;text-decoration:none;font-family:${FUENTE};">Verificar en el SAT →</a>
+                    </td>
+                  </tr>
+                </table>`
+                    : ""
+                }
               </td>
             </tr>
             <tr>
@@ -111,6 +128,18 @@ export function plantillaCorreoFactura({
               <td style="padding:20px 32px 28px;border-top:1px solid ${LINE};text-align:center;font-family:${FUENTE};">
                 <p style="margin:0;font-size:12px;line-height:1.5;color:${MUTED};">Este es un correo automático — por favor no respondas a esta dirección.</p>
                 <p style="margin:6px 0 0;font-size:12px;color:${MUTED};">Enviado con <strong style="color:${BRAND_700};">Nuvio</strong> · ${dominioVisible()}</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:18px auto 0;">
+                  <tr>
+                    <td style="vertical-align:middle;padding-right:12px;">
+                      <a href="https://proyectosolmeca.com/" style="display:block;line-height:0;">
+                        <img src="${olmecaLogoUrl}" width="56" height="56" alt="Proyectos Olmeca" border="0" style="display:block;border-radius:10px;" />
+                      </a>
+                    </td>
+                    <td style="vertical-align:middle;">
+                      <a href="https://proyectosolmeca.com/" style="font-size:12px;color:${MUTED};text-decoration:none;font-family:${FUENTE};">Nuvio es un producto de <strong style="color:${BRAND_700};">Proyectos Olmeca</strong></a>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>

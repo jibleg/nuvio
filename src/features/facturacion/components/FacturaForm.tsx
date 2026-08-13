@@ -470,9 +470,22 @@ export function FacturaForm(props: { mode: "create" } | { mode: "edit"; initial:
         open={nuevoClienteAbierto}
         onClose={() => setNuevoClienteAbierto(false)}
         title="Nuevo cliente"
-        description="Agrega un cliente de facturación sin salir de la factura."
         size="lg"
         closeOnOverlayClick={false}
+        hero={
+          <div className="bg-linear-to-br from-brand-600 to-brand-800 px-6 py-7">
+            <div className="flex items-center gap-3">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+                <UserPlus className="h-5 w-5 text-white" />
+              </span>
+              <div className="min-w-0 pr-10">
+                <p className="font-display text-lg font-bold text-white">Nuevo cliente</p>
+                <p className="mt-0.5 text-sm text-white/75">Agrega un cliente de facturación sin salir de la factura</p>
+              </div>
+            </div>
+            <div className="mt-5 h-1 rounded-full bg-aurora-400/70" />
+          </div>
+        }
       >
         <ContactoForm
           mode="create"

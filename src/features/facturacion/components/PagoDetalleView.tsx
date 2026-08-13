@@ -2,15 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, AlertTriangle, Ban, CheckCircle2, FileCode2, Loader2, Trash2, Zap } from "lucide-react";
+import { AlertCircle, AlertTriangle, Ban, CheckCircle2, FileCode2, Loader2, SearchCheck, Trash2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ROUTES } from "@/config/routes";
-import { eliminarBorradorPagoAction, timbrarPagoAction } from "../actions";
+import { notifyError, notifySuccess } from "@/lib/toast";
+import { eliminarBorradorPagoAction, timbrarPagoAction, verificarEstatusCancelacionAction } from "../actions";
 import type { PagoDetalle } from "../types";
 import { CancelarPagoModal } from "./CancelarPagoModal";
 import { PdfPreviewPanel, PdfToggleButton } from "./PdfViewer";
+
+const AVISO_CANCELACION: Record<string, string> = {
+  solicitada: "Cancelación en proceso: pendiente de que el receptor la acepte o rechace (o venzan 72 h).",
+  rechazada: "El receptor rechazó una solicitud de cancelación previa. El complemento sigue vigente.",
+  plazo_vencido: "Venció el plazo de una solicitud de cancelación anterior sin respuesta. El complemento sigue vigente.",
+};
 
 const formatoMoneda = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 
@@ -20,9 +27,24 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
   const [cancelando, setCancelando] = useState(false);
   const [timbrando, setTimbrando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificando, setVerificando] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [verPdf, setVerPdf] = useState(false);
   const pdfSrc = `${ROUTES.facturacion}/pagos/${pago.id}/pdf`;
+
+  const verificarEstatusCancelacion = () => {
+    setVerificando(true);
+    startTransition(async () => {
+      const result = await verificarEstatusCancelacionAction(pago.id);
+      setVerificando(false);
+      if (!result.ok) {
+        notifyError(result.error);
+        return;
+      }
+      notifySuccess(result.mensaje);
+      router.refresh();
+    });
+  };
 
   if (pago.estado === "borrador") {
     return (
@@ -167,6 +189,26 @@ export function PagoDetalleView({ pago, puedeGestionar }: { pago: PagoDetalle; p
             <p className="mt-0.5 text-ink">{pago.fechaTimbrado ?? "—"}</p>
           </div>
         </div>
+
+        {pago.estatusCancelacion && AVISO_CANCELACION[pago.estatusCancelacion] && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-sunrise-400/30 bg-sunrise-300/20 px-3.5 py-3 dark:bg-sunrise-400/10">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-sunrise-500" />
+            <div className="flex-1">
+              <p className="text-sm text-ink">{AVISO_CANCELACION[pago.estatusCancelacion]}</p>
+              {puedeGestionar && pago.estatusCancelacion === "solicitada" && (
+                <button
+                  type="button"
+                  disabled={verificando || isPending}
+                  onClick={verificarEstatusCancelacion}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 transition-colors hover:text-brand-800 disabled:opacity-60 dark:text-brand-300 dark:hover:text-brand-200"
+                >
+                  {verificando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SearchCheck className="h-3.5 w-3.5" />}
+                  Verificar estatus ante el SAT
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <PdfToggleButton abierto={verPdf} onToggle={() => setVerPdf((v) => !v)} label="Ver PDF" variant="primary" />
